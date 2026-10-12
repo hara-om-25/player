@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Плеєр з мітками</title>
-<meta name="theme-color" content="#3c3f44">
+<meta name="theme-color" content="#1e1f22">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
@@ -12,10 +12,10 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
 :root {
-  --bg:      #4b4e53;   /* основний фон — сірий */
-  --surface: #3c3f44;
-  --surf2:   #55595f;
-  --surf3:   #6a6e75;
+  --bg:      #252729;   /* основний фон — темно-сірий */
+  --surface: #1e1f22;
+  --surf2:   #2a2c2f;
+  --surf3:   #35373a;
   --accent:  #c4a54a;   /* приглушений жовтий (не яскравий) */
   --accent2: #e2cc80;
   --star:    #ffd23f;
@@ -1088,7 +1088,7 @@ addEventListener('beforeunload', () => { if (data) { data.pos = audio.currentTim
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v6';
+const APP_VER = 'v7';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
