@@ -198,6 +198,13 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14
   .pfoot .sq { width: 48px; height: 48px; }
   .footer { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--surf3); }
 }
+@media (max-width: 480px) {     /* вузький телефон: 11 кнопок мають уміститись в один рядок */
+  .transport { padding-left: 6px; padding-right: 6px; }
+  .transport .mid { gap: 3px; }
+  .transport .skip { font-size: 13px; padding: 10px 0; border-radius: 6px; }
+  .transport .nav { padding: 8px 2px; font-size: 15px; }
+  .transport .play { width: 46px; height: 46px; font-size: 19px; flex: none; }
+}
 </style>
 </head>
 <body>
@@ -259,7 +266,9 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14
     <button class="skip" data-skip="-30">−30</button>
     <button class="skip" data-skip="-10">−10</button>
     <button class="skip" data-skip="-5">−5</button>
+    <button class="skip" data-skip="-1">−1</button>
     <button class="play" id="btnPlay" title="Відтворення / пауза (пробіл)">▶</button>
+    <button class="skip" data-skip="1">+1</button>
     <button class="skip" data-skip="5">+5</button>
     <button class="skip" data-skip="10">+10</button>
     <button class="skip" data-skip="30">+30</button>
@@ -1088,7 +1097,7 @@ addEventListener('beforeunload', () => { if (data) { data.pos = audio.currentTim
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v9';
+const APP_VER = 'v10';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
