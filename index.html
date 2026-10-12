@@ -87,7 +87,10 @@ main {
   padding: 10px 12px; display: flex; align-items: center; gap: 8px;
   border-bottom: 1px solid var(--surf3);
 }
-.panel h2 span { flex: 1; }
+.panel h2 { display: grid; grid-template-columns: 1fr auto 1fr; }
+.panel h2 > span { text-align: center; white-space: nowrap; }
+.panel h2 > i { font-style: normal; display: flex; }
+.panel h2 > i.r { justify-content: flex-end; }
 .panel h2 button { padding: 4px 10px; font-size: 18px; line-height: 1; }
 .panel h2 .hsq { width: 44px; height: 44px; padding: 0; border-radius: 9px; font-size: 26px; flex: none; color: #111; }
 .panel h2 .hsq.save { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; letter-spacing: 0; }
@@ -131,7 +134,7 @@ main {
 .markctl .sq, .savectl .sq { width: 56px; height: 56px; padding: 0; border-radius: 10px; }
 .markctl .br { font-size: 26px; font-weight: 700; line-height: 1; }
 .markctl .br.set { border-color: var(--clip); color: var(--clip); }
-.bigtime { text-align: center; font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: var(--accent); }
+.bigtime { text-align: center; font-size: 36px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: var(--accent); }
 .savectl { display: flex; justify-content: flex-end; }
 .savectl .sq { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1; }
 .savectl .sq b { font-size: 20px; }
@@ -147,7 +150,7 @@ main {
 /* ── timeline ─────────────────────────── */
 .timeline { padding: 6px 16px 0; }
 .transport .right { grid-column: 3; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 14px; }
-.transport .right .star { width: 52px; height: 52px; padding: 0; font-size: 28px; color: var(--star); border-radius: 10px; }
+.transport .star { width: 52px; height: 52px; padding: 0; font-size: 28px; color: var(--star); border-radius: 10px; }
 .transport .dur { font-size: 22px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
 .speed .arr { color: var(--accent); }
 .times { display: flex; justify-content: space-between; font-size: 22px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
@@ -182,11 +185,13 @@ main {
   background: var(--accent); border-color: var(--accent); color: #111;
 }
 .speed { display: flex; align-items: center; gap: 4px; grid-column: 1; grid-row: 1; justify-self: start; }
-.speed { gap: 6px; }
+.speed { gap: 0; }
+.speed .arr { border-radius: 8px 0 0 8px; }
+.speed #spUp { border-radius: 0 8px 8px 0; }
 .speed button { padding: 12px 16px; font-size: 20px; line-height: 1; }
 .speed .val {
   min-width: 86px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent2);
-  padding: 12px 8px; font-size: 20px; background: var(--surf2); border: 1px solid var(--surf3); border-radius: 8px;
+  padding: 12px 8px; font-size: 20px; background: var(--surf2); border: 1px solid var(--surf3); border-left: none; border-right: none; border-radius: 0;
 }
 .speedmenu {
   position: fixed; z-index: 20; background: var(--surface); border: 1px solid var(--surf3); border-radius: 10px;
@@ -245,6 +250,7 @@ dialog .line button { flex: none; padding: 9px 14px; }
   .transport .skip { font-size: 13px; padding: 10px 0; border-radius: 6px; }
   .transport .nav { padding: 8px 2px; font-size: 15px; }
   .transport .play { width: 46px; height: 46px; font-size: 19px; flex: none; }
+  .transport .star { width: 38px; height: 38px; font-size: 20px; flex: none; }
 }
 </style>
 </head>
@@ -260,16 +266,17 @@ dialog .line button { flex: none; padding: 9px 14px; }
 <main>
   <!-- плейлист -->
   <section class="panel playlist">
-    <h2><button id="btnAdd" class="hsq accent" title="Додати файли">+</button><span>Плейлист</span></h2>
+    <h2><i class="l"><button id="btnAdd" class="hsq accent" title="Додати файли">+</button></i><span>Плейлист</span><i class="r"></i></h2>
     <input type="file" id="fileInput" accept="audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.amr" multiple hidden>
     <div class="list" id="playlist"></div>
   </section>
 
   <!-- мітки -->
   <section class="panel marks">
-    <h2><span>Мітки</span>
-      <button id="btnBackup" class="hbtn" title="Зберегти всі мітки й фрагменти у файл (резервна копія)">⤓ Копія</button>
-      <button id="btnRestore" class="hbtn" title="Відновити мітки й фрагменти з резервної копії">⤒ Відновити</button>
+    <h2>
+      <i class="l"><button id="btnBackup" class="hbtn" title="Зберегти всі мітки й фрагменти у файл (резервна копія)">⤓ Копія</button></i>
+      <span>Мітки</span>
+      <i class="r"><button id="btnRestore" class="hbtn" title="Відновити мітки й фрагменти з резервної копії">⤒ Відновити</button></i>
       <input type="file" id="restoreInput" accept=".json,application/json" hidden>
     </h2>
     <div class="list" id="markList"></div>
@@ -283,7 +290,7 @@ dialog .line button { flex: none; padding: 9px 14px; }
   </section>
   <!-- фрагменти (окремі mp3) -->
   <section class="panel clips">
-    <h2><span>Фрагменти → MP3</span><button id="btnSaveClip" class="hsq accent save" title="Зберегти фрагмент як MP3"><b>⬇</b><small>MP3</small></button></h2>
+    <h2><i class="l"></i><span>Фрагменти → MP3</span><i class="r"><button id="btnSaveClip" class="hsq accent save" title="Зберегти фрагмент як MP3"><b>⬇</b><small>MP3</small></button></i></h2>
     <div class="list" id="clipList"></div>
     <div class="progress" id="progress"></div>
   </section>
@@ -314,9 +321,9 @@ dialog .line button { flex: none; padding: 9px 14px; }
     <button class="skip" data-skip="10">+10</button>
     <button class="skip" data-skip="30">+30</button>
     <button class="nav" id="btnNext" title="Наступний файл">⏭</button>
+    <button id="btnMark" class="star" title="Поставити мітку на поточній позиції  ( M )">★</button>
    </div>
     <div class="right">
-      <button id="btnMark" class="star" title="Поставити мітку на поточній позиції  ( M )">★</button>
       <span class="dur" id="tDur">00:00:00</span>
     </div>
     <div class="speed">
@@ -1195,7 +1202,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v19';
+const APP_VER = 'v20';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
