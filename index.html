@@ -224,11 +224,25 @@ dialog h3 { font-size: 16px; margin-bottom: 4px; }
 dialog p { color: var(--dim); font-size: 13px; margin-bottom: 12px; }
 dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
 dialog .line { display: flex; gap: 10px; align-items: stretch; }
-dialog .line textarea {
-  flex: 1; min-width: 0; resize: none; font: inherit; font-size: 20px; line-height: 1.3;
-  color: var(--text); background: var(--bg); border: 1px solid var(--surf3); border-radius: 8px; padding: 10px 12px;
+/* одна рамка: зверху час (можна правити) і заголовок, нижче — назва */
+dialog .box {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;
+  background: var(--bg); border: 1px solid var(--surf3); border-radius: 8px; padding: 10px 12px;
 }
-dialog .line textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+dialog .box:focus-within { outline: 2px solid var(--accent); border-color: transparent; }
+dialog .box .r1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+dialog .box .r1 h3 { margin: 0 0 0 auto; font-size: 15px; color: var(--dim); font-weight: 600; }
+dialog .box .times { display: flex; align-items: center; gap: 6px; color: var(--dim); min-width: 0; flex: 0 1 auto; }
+dialog .box .tm {
+  width: 8.2em; min-width: 0; flex: 0 1 8.2em; font: inherit; font-size: 18px; font-variant-numeric: tabular-nums; color: var(--accent);
+  background: var(--surface); border: 1px solid var(--surf3); border-radius: 6px; padding: 5px 8px; text-align: center;
+}
+dialog .box .tm:focus { outline: 1px solid var(--accent); }
+dialog .box .tm.bad { border-color: var(--danger); color: #ff6b6b; }
+dialog .box textarea {
+  resize: none; font: inherit; font-size: 20px; line-height: 1.3; color: var(--text);
+  background: none; border: none; padding: 2px 0; outline: none;
+}
 dialog .line .btns { display: flex; flex-direction: column; gap: 10px; flex: none; }
 dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
 /* вікно назви — посередині вільного місця над клавіатурою (місце рахує JS) */
@@ -260,6 +274,12 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   .markctl .grp { gap: 8px; }
   .pfoot .sq { width: 48px; height: 48px; }
   .footer { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--surf3); }
+}
+@media (max-width: 480px) {     /* вузький телефон: вікно назви — кнопки під рамкою */
+  dialog .line { flex-direction: column; }
+  dialog .line .btns { flex-direction: row; }
+  dialog .box .times { flex: 1 1 100%; }
+  dialog .box .tm { flex: 1 1 0; width: auto; }
 }
 @media (max-width: 480px) {     /* вузький телефон: 11 кнопок мають уміститись в один рядок */
   .transport { padding-left: 6px; padding-right: 6px; }
@@ -355,10 +375,11 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
 
 <dialog id="dlg">
   <form method="dialog" id="dlgForm">
-    <h3 id="dlgTitle"></h3>
-    <p id="dlgText"></p>
     <div class="line">
-      <textarea id="dlgInput" rows="3" autocomplete="off" enterkeyhint="done"></textarea>
+      <div class="box">
+        <div class="r1"><span class="times" id="dlgTimes"></span><h3 id="dlgTitle"></h3></div>
+        <textarea id="dlgInput" rows="2" autocomplete="off" enterkeyhint="done"></textarea>
+      </div>
       <div class="btns">
         <button value="cancel" type="button" id="dlgCancel">Скасувати</button>
         <button value="ok" class="accent" id="dlgOk">OK</button>
@@ -755,15 +776,35 @@ addEventListener('resize', placeDlg);
 $('dlgInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('dlgForm').requestSubmit(); }
 });
-function ask(title, text, value) {
+// «1:02:03.4», «2:03», «45» → секунди (NaN, якщо не розібрати)
+function parseTime(str) {
+  const parts = String(str).trim().replace(',', '.').split(':');
+  if (!parts.length || parts.length > 3 || parts.some(x => !/^\d+(\.\d*)?$/.test(x))) return NaN;
+  return parts.reduce((acc, x) => acc * 60 + parseFloat(x), 0);
+}
+// Вікно назви: повертає null (скасовано) або { name, times } — час теж можна змінити
+function ask(title, value, times = []) {
   return new Promise(resolve => {
     const d = $('dlg');
-    $('dlgTitle').textContent = title; $('dlgText').textContent = text || '';
+    $('dlgTitle').textContent = title;
     $('dlgInput').value = value || '';
+    $('dlgTimes').innerHTML = times.map((t, i) =>
+      (i ? '<span>–</span>' : '') + `<input class="tm" type="text" inputmode="decimal" autocomplete="off" value="${fmt(t, true)}">`).join('');
     const done = v => { d.close(); resolve(v); };
     $('dlgCancel').onclick = () => done(null);
     d.oncancel = e => { e.preventDefault(); done(null); };
-    $('dlgForm').onsubmit = e => { e.preventDefault(); done($('dlgInput').value.trim()); };
+    $('dlgForm').onsubmit = e => {
+      e.preventDefault();
+      const ins = [...$('dlgTimes').querySelectorAll('.tm')];
+      const ts = ins.map(x => parseTime(x.value));
+      let ok = true;
+      ins.forEach((x, i) => {
+        const bad = !isFinite(ts[i]) || ts[i] < 0 || (dur() && ts[i] > dur() + 0.05) || (i === 1 && ts[1] - ts[0] < 0.2);
+        x.classList.toggle('bad', bad); if (bad) ok = false;
+      });
+      if (!ok) return toast('Перевірте час: формат год:хв:сек, напр. 1:02:03.5');
+      done({ name: $('dlgInput').value.trim(), times: ts.map(t => Math.min(t, dur() || t)) });
+    };
     d.showModal();
     placeDlg();
     setTimeout(() => { $('dlgInput').focus(); $('dlgInput').select(); }, 30);
@@ -990,9 +1031,9 @@ function renderBar() {
 async function addMark() {
   if (!hasTrack()) return toast('Спочатку відкрийте файл');
   const t = audio.currentTime;
-  const name = await ask('Нова мітка · ' + fmt(t, true), 'Назва мітки', 'Мітка ' + (data.marks.length + 1));
-  if (name === null) return;
-  data.marks.push({ t, name: name || 'Мітка ' + (data.marks.length + 1) });
+  const r = await ask('Нова мітка', 'Мітка ' + (data.marks.length + 1), [t]);
+  if (r === null) return;
+  data.marks.push({ t: r.times[0], name: r.name || 'Мітка ' + (data.marks.length + 1) });
   data.marks.sort((a, b) => a.t - b.t);
   save(); renderMarks(); renderBar(); renderPlaylist();
 }
@@ -1016,8 +1057,12 @@ $('markList').addEventListener('click', async e => {
   const m = data.marks[+it.dataset.i];
   const a = e.target.closest('[data-a]')?.dataset.a;
   if (a === 'ren') {
-    const n = await ask('Перейменувати мітку', fmt(m.t, true), m.name);
-    if (n) { m.name = n; save(); renderMarks(); renderBar(); }
+    const r = await ask('Змінити мітку', m.name, [m.t]);
+    if (r) {
+      if (r.name) m.name = r.name;
+      m.t = r.times[0]; data.marks.sort((a, b) => a.t - b.t);
+      save(); renderMarks(); renderBar();
+    }
   } else if (a === 'del') {
     if (!confirm('Видалити мітку «' + m.name + '»?')) return;
     data.marks.splice(+it.dataset.i, 1); save(); renderMarks(); renderBar(); renderPlaylist();
@@ -1056,9 +1101,9 @@ $('btnSaveClip').onclick = async () => {
   if (selStart == null && selEnd == null) return toast('Позначте початок [ і кінець ] фрагмента');
   if (e - s < 0.2) return toast('Фрагмент закороткий');
   const base = tracks[cur].file.name.replace(/\.[^.]+$/, '');
-  const name = await ask('Зберегти фрагмент MP3', fmt(s, true) + ' – ' + fmt(e, true) + '  (' + fmt(e - s) + ')', base + ' ' + (data.clips.length + 1));
-  if (name === null) return;
-  const clip = { name: name || base + ' ' + (data.clips.length + 1), start: s, end: e };
+  const r = await ask('Зберегти фрагмент MP3', base + ' ' + (data.clips.length + 1), [s, e]);
+  if (r === null) return;
+  const clip = { name: r.name || base + ' ' + (data.clips.length + 1), start: r.times[0], end: r.times[1] };
   data.clips.push(clip);
   save(); renderClips(); renderBar(); renderPlaylist();
   selStart = selEnd = null; renderSel();
@@ -1092,8 +1137,12 @@ $('clipList').addEventListener('click', async e => {
   if (a === 'play') { seek(c.start); clipStopAt = c.end; audio.play().catch(() => {}); }
   else if (a === 'dl') exportClip(c);
   else if (a === 'ren') {
-    const n = await ask('Перейменувати фрагмент', fmt(c.start, true) + ' – ' + fmt(c.end, true), c.name);
-    if (n) { c.name = n; save(); renderClips(); renderBar(); }
+    const r = await ask('Змінити фрагмент', c.name, [c.start, c.end]);
+    if (r) {
+      if (r.name) c.name = r.name;
+      c.start = r.times[0]; c.end = r.times[1];
+      save(); renderClips(); renderBar();
+    }
   } else if (a === 'del') {
     if (!confirm('Видалити фрагмент «' + c.name + '» зі списку?')) return;
     data.clips.splice(i, 1); save(); renderClips(); renderBar(); renderPlaylist();
@@ -1234,7 +1283,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v23';
+const APP_VER = 'v24';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
