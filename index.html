@@ -216,7 +216,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14
   <!-- плейлист -->
   <section class="panel playlist">
     <h2><span>Плейлист</span></h2>
-    <input type="file" id="fileInput" accept="audio/*,video/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.amr,.3gp" multiple hidden>
+    <input type="file" id="fileInput" accept="audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.amr" multiple hidden>
     <div class="list" id="playlist"></div>
     <div class="pfoot"><button id="btnAdd" class="sq accent" title="Додати файли">+</button></div>
   </section>
@@ -1088,7 +1088,7 @@ addEventListener('beforeunload', () => { if (data) { data.pos = audio.currentTim
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v4';
+const APP_VER = 'v5';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
