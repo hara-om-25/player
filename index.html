@@ -703,7 +703,6 @@ let cur = -1;               // індекс поточного треку
 let data = null;            // {marks:[{t,name}], clips:[{name,start,end}], pos}
 let selStart = null, selEnd = null;
 let clipStopAt = null;      // для прослуховування фрагмента
-const decodedCache = new Map();
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
 
 /* ═════════ збереження (localStorage) ═════════
@@ -850,7 +849,7 @@ $('playlist').addEventListener('click', e => {
     const i = +rm.dataset.rm;
     save();
     URL.revokeObjectURL(tracks[i].url);
-    decodedCache.delete(tracks[i].key);
+    Slicer.cache.delete(tracks[i].key);
     idb.del(tracks[i].key).catch(() => {});
     tracks.splice(i, 1);
     if (i === cur) {
@@ -1103,18 +1102,206 @@ $('clipList').addEventListener('click', async e => {
 /* ── кодування MP3 (lamejs) ── */
 let busy = false;
 function progress(msg) { const p = $('progress'); p.textContent = msg || ''; p.classList.toggle('on', !!msg); }
-async function decodeTrack(t) {
-  if (decodedCache.has(t.key)) return decodedCache.get(t.key);
-  const buf = await t.file.arrayBuffer();
+/* ── вирізання шматка без розпакування всього файлу ──
+   Для фрагмента читаються лише потрібні кадри файлу (AAC/ADTS, M4A/MP4, MP3),
+   тож пам'яті йде стільки, скільки займає сам фрагмент, а не 3-годинний запис. */
+const Slicer = (() => {
+  const AAC_SR = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+  const MP3_BR1 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320];
+  const MP3_BR2 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160];
+  const MP3_SR = [44100, 48000, 32000];
+  const bytes = async (file, a, b) => new Uint8Array(await file.slice(a, b).arrayBuffer());
+  const u32 = (d, i) => ((d[i] << 24) >>> 0) + (d[i + 1] << 16) + (d[i + 2] << 8) + d[i + 3];
+  const typ = (d, i) => String.fromCharCode(d[i], d[i + 1], d[i + 2], d[i + 3]);
+
+  async function skipId3(file) {
+    const h = await bytes(file, 0, 10);
+    if (h[0] !== 0x49 || h[1] !== 0x44 || h[2] !== 0x33) return 0;
+    const sz = (h[6] & 0x7f) << 21 | (h[7] & 0x7f) << 14 | (h[8] & 0x7f) << 7 | (h[9] & 0x7f);
+    return 10 + sz + (h[5] & 0x10 ? 10 : 0);
+  }
+  function adtsHdr(d, i) {
+    if (d[i] !== 0xff || (d[i + 1] & 0xf6) !== 0xf0) return null;
+    const sfi = (d[i + 2] >> 2) & 0xf, len = ((d[i + 3] & 3) << 11) | (d[i + 4] << 3) | (d[i + 5] >> 5);
+    if (sfi > 12 || len < 7) return null;
+    return { len, sr: AAC_SR[sfi], spf: 1024 * ((d[i + 6] & 3) + 1) };
+  }
+  function mp3Hdr(d, i) {
+    if (d[i] !== 0xff || (d[i + 1] & 0xe0) !== 0xe0) return null;
+    const ver = (d[i + 1] >> 3) & 3, layer = (d[i + 1] >> 1) & 3, bri = d[i + 2] >> 4, sri = (d[i + 2] >> 2) & 3;
+    if (ver === 1 || layer !== 1 || bri === 0 || bri === 15 || sri === 3) return null;   // лише Layer III
+    const v1 = ver === 3, br = (v1 ? MP3_BR1 : MP3_BR2)[bri];
+    const sr = MP3_SR[sri] / (v1 ? 1 : ver === 2 ? 2 : 4), pad = (d[i + 2] >> 1) & 1;
+    return { len: Math.floor((v1 ? 144000 : 72000) * br / sr) + pad, sr, spf: v1 ? 1152 : 576 };
+  }
+  // Послідовні кадри (ADTS чи MP3): один прохід файлом, запам'ятовуємо зсуви кадрів
+  async function scanFrames(file, parse, onProgress) {
+    const start = await skipId3(file), CH = 4 << 20;
+    const off = [], len = [];
+    let pos = start, win = null, ws = 0, sr = 0, spf = 0, misses = 0;
+    while (pos + 8 < file.size) {
+      if (!win || pos + 16 > ws + win.length) {
+        ws = pos; win = await bytes(file, pos, Math.min(file.size, pos + CH));
+        if (onProgress) onProgress(pos / file.size);
+        if (win.length < 8) break;
+      }
+      const i = pos - ws, h = parse(win, i);
+      if (!h) {                      // збій синхронізації — шукаємо наступний кадр
+        if (++misses > 1 << 20) break;
+        pos++; continue;
+      }
+      if (!sr) { sr = h.sr; spf = h.spf; }
+      off.push(pos); len.push(h.len); pos += h.len;
+    }
+    if (off.length < 2) throw new Error('кадри не знайдено');
+    const times = new Float64Array(off.length);
+    for (let k = 0; k < times.length; k++) times[k] = k * spf / sr;
+    return { off, len, times, wrap: null };
+  }
+  // M4A/MP4: таблиці кадрів з moov, кадри AAC загортаємо в ADTS
+  async function mp4Index(file) {
+    let pos = 0, moov = null;
+    while (pos + 8 <= file.size) {
+      const h = await bytes(file, pos, pos + 16);
+      let size = u32(h, 0); const t = typ(h, 4);
+      if (size === 1) size = u32(h, 8) * 4294967296 + u32(h, 12);
+      else if (size === 0) size = file.size - pos;
+      if (size < 8) break;
+      if (t === 'moov') { moov = await bytes(file, pos, pos + size); break; }
+      pos += size;
+    }
+    if (!moov) throw new Error('moov не знайдено');
+    const kids = (d, a, b) => {      // дочірні бокси в межах [a,b)
+      const out = [];
+      for (let p = a; p + 8 <= b;) {
+        let s = u32(d, p); const t = typ(d, p + 4); let hs = 8;
+        if (s === 1) { s = u32(d, p + 8) * 4294967296 + u32(d, p + 12); hs = 16; }
+        if (s < 8 || p + s > b) break;
+        out.push({ t, a: p + hs, b: p + s }); p += s;
+      }
+      return out;
+    };
+    const find = (d, a, b, path) => {
+      let cur = [{ a, b }];
+      for (const name of path) {
+        const nx = []; for (const c of cur) nx.push(...kids(d, c.a, c.b).filter(k => k.t === name));
+        cur = nx; if (!cur.length) return [];
+      }
+      return cur;
+    };
+    for (const trak of find(moov, 8, moov.length, ['trak'])) {
+      const hdlr = find(moov, trak.a, trak.b, ['mdia', 'hdlr'])[0];
+      if (!hdlr || typ(moov, hdlr.a + 8) !== 'soun') continue;
+      const mdhd = find(moov, trak.a, trak.b, ['mdia', 'mdhd'])[0];
+      const ts = moov[mdhd.a] === 1 ? u32(moov, mdhd.a + 20) : u32(moov, mdhd.a + 12);
+      const stbl = find(moov, trak.a, trak.b, ['mdia', 'minf', 'stbl'])[0];
+      const box = n => kids(moov, stbl.a, stbl.b).find(k => k.t === n);
+      // AudioSpecificConfig з esds
+      const stsd = box('stsd'); let asc = null;
+      for (let p = stsd.a; p + 4 < stsd.b; p++) if (typ(moov, p) === 'esds') { asc = p + 8; break; }
+      if (asc === null) throw new Error('esds не знайдено');
+      let p = asc; const end = stsd.b;
+      const desc = () => { const tag = moov[p++]; let l = 0, b; do { b = moov[p++]; l = (l << 7) | (b & 0x7f); } while (b & 0x80); return { tag, l }; };
+      let d = desc(); if (d.tag !== 3) throw new Error('esds');
+      const fl = moov[p + 2]; p += 3; if (fl & 0x80) p += 2; if (fl & 0x40) p += 1 + moov[p]; if (fl & 0x20) p += 2;
+      d = desc(); if (d.tag !== 4) throw new Error('esds');
+      p += 13; d = desc(); if (d.tag !== 5 || p + 2 > end) throw new Error('esds');
+      const aot = moov[p] >> 3, sfi = ((moov[p] & 7) << 1) | (moov[p + 1] >> 7), chc = (moov[p + 1] >> 3) & 0xf;
+      if (sfi > 12) throw new Error('частота');
+      const profile = aot >= 1 && aot <= 4 ? aot - 1 : 1;
+      // розміри, зсуви, час кадрів
+      const stsz = box('stsz'), fixed = u32(moov, stsz.a + 4), n = u32(moov, stsz.a + 8);
+      const len = new Array(n); for (let k = 0; k < n; k++) len[k] = fixed || u32(moov, stsz.a + 12 + 4 * k);
+      const stco = box('stco') || box('co64'), big = stco.t === 'co64', nc = u32(moov, stco.a + 4);
+      const chunkOff = k => big ? u32(moov, stco.a + 8 + 8 * k) * 4294967296 + u32(moov, stco.a + 12 + 8 * k) : u32(moov, stco.a + 8 + 4 * k);
+      const stsc = box('stsc'), ne = u32(moov, stsc.a + 4);
+      const off = new Array(n); let s = 0;
+      for (let e = 0; e < ne; e++) {
+        const first = u32(moov, stsc.a + 8 + 12 * e), spc = u32(moov, stsc.a + 12 + 12 * e);
+        const last = e + 1 < ne ? u32(moov, stsc.a + 20 + 12 * e) - 1 : nc;
+        for (let c = first; c <= last && s < n; c++) {
+          let o = chunkOff(c - 1);
+          for (let j = 0; j < spc && s < n; j++) { off[s] = o; o += len[s]; s++; }
+        }
+      }
+      const stts = box('stts'), nt = u32(moov, stts.a + 4), times = new Float64Array(n);
+      let k = 0, acc = 0;
+      for (let e = 0; e < nt; e++) {
+        const cnt = u32(moov, stts.a + 8 + 8 * e), dl = u32(moov, stts.a + 12 + 8 * e);
+        for (let j = 0; j < cnt && k < n; j++) { times[k++] = acc / ts; acc += dl; }
+      }
+      const wrap = size => {            // 7-байтовий заголовок ADTS
+        const L = size + 7;
+        return Uint8Array.of(0xff, 0xf1, (profile << 6) | (sfi << 2) | (chc >> 2), ((chc & 3) << 6) | (L >> 11),
+          (L >> 3) & 0xff, ((L & 7) << 5) | 0x1f, 0xfc);
+      };
+      return { off, len, times, wrap };
+    }
+    throw new Error('аудіодоріжку не знайдено');
+  }
+  const cache = new Map();
+  async function index(file, key, onProgress) {
+    if (cache.has(key)) return cache.get(key);
+    const h = await bytes(file, 0, 12), id3 = await skipId3(file), f = await bytes(file, id3, id3 + 10);
+    let idx;
+    if (typ(h, 4) === 'ftyp') idx = await mp4Index(file);
+    else if (adtsHdr(f, 0)) idx = await scanFrames(file, adtsHdr, onProgress);
+    else if (mp3Hdr(f, 0)) idx = await scanFrames(file, mp3Hdr, onProgress);
+    else throw new Error('формат не підтримує вирізання');
+    cache.clear(); cache.set(key, idx);
+    return idx;
+  }
+  const frameAt = (times, t) => {       // останній кадр, що починається не пізніше t
+    let lo = 0, hi = times.length - 1;
+    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (times[m] <= t) lo = m; else hi = m - 1; }
+    return lo;
+  };
+  // Байти кадрів, що покривають [s, e] (з кількома кадрами запасу на початку), і час першого з них
+  async function extract(file, idx, s, e) {
+    const n = idx.times.length, PRE = 4;
+    const i0 = Math.max(0, frameAt(idx.times, s) - PRE), i1 = Math.min(n - 1, frameAt(idx.times, e) + 2);
+    const parts = []; let total = 0;
+    // читаємо суцільними шматками (кадри поспіль лежать поруч)
+    let a = i0;
+    while (a <= i1) {
+      let b = a, endB = idx.off[a] + idx.len[a];
+      while (b + 1 <= i1 && idx.off[b + 1] === endB && endB - idx.off[a] < (8 << 20)) { b++; endB += idx.len[b]; }
+      const buf = await bytes(file, idx.off[a], endB);
+      for (let k = a, p = 0; k <= b; k++) {
+        if (idx.wrap) { const w = idx.wrap(idx.len[k]); parts.push(w); total += w.length; }
+        parts.push(buf.subarray(p, p + idx.len[k])); total += idx.len[k]; p += idx.len[k];
+      }
+      a = b + 1;
+    }
+    const out = new Uint8Array(total); let p = 0;
+    for (const x of parts) { out.set(x, p); p += x.length; }
+    return { data: out.buffer, t0: idx.times[i0] };
+  }
+  return { index, extract, cache };
+})();
+
+function decodeBuf(buf) {
   const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   const ctx = new Ctx(2, 1, 44100);
-  const audioBuf = await new Promise((res, rej) => {
+  return new Promise((res, rej) => {
     const p = ctx.decodeAudioData(buf, res, rej);
     if (p && p.then) p.then(res, rej);
   });
-  decodedCache.clear();               // тримаємо в пам'яті лише один декодований файл
-  decodedCache.set(t.key, audioBuf);
-  return audioBuf;
+}
+// Розпакований шматок файлу навколо фрагмента і зсув початку фрагмента в ньому
+async function decodeClip(t, s, e) {
+  try {
+    const idx = await Slicer.index(t.file, t.key, p => progress('Пошук фрагмента у файлі… ' + Math.round(p * 100) + '%'));
+    progress('Декодування фрагмента…');
+    const r = await Slicer.extract(t.file, idx, s, e);
+    return { ab: await decodeBuf(r.data), offset: s - r.t0 };
+  } catch (err) {
+    console.warn('вирізання шматка не вдалося:', err);
+    // запасний шлях — розпакувати весь файл; для великих файлів це вбиває сторінку, тож не пробуємо
+    if (t.file.size > 60 * 1024 * 1024) throw new Error('цей файл не вдається порізати по шматках, а цілком він завеликий');
+    progress('Декодування файлу…');
+    return { ab: await decodeBuf(await t.file.arrayBuffer()), offset: s };
+  }
 }
 function toInt16(f32, from, to) {
   const out = new Int16Array(to - from);
@@ -1129,10 +1316,9 @@ async function exportClip(clip) {
   if (typeof lamejs === 'undefined') return toast('MP3-кодер не завантажився');
   busy = true; $('btnSaveClip').disabled = true;
   try {
-    progress('Декодування файлу…');
-    const ab = await decodeTrack(tracks[cur]);
+    const { ab, offset } = await decodeClip(tracks[cur], clip.start, clip.end);
     const sr = ab.sampleRate, ch = Math.min(2, ab.numberOfChannels);
-    const from = Math.max(0, Math.floor(clip.start * sr)), to = Math.min(ab.length, Math.ceil(clip.end * sr));
+    const from = Math.max(0, Math.floor(offset * sr)), to = Math.min(ab.length, from + Math.ceil((clip.end - clip.start) * sr));
     const L = toInt16(ab.getChannelData(0), from, to);
     const R = ch > 1 ? toInt16(ab.getChannelData(1), from, to) : null;
     const enc = new lamejs.Mp3Encoder(ch, sr, ch > 1 ? 160 : 128);
@@ -1234,7 +1420,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v25';
+const APP_VER = 'v26';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
