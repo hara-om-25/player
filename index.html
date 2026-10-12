@@ -139,7 +139,7 @@ main {
 .savectl .sq { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1; }
 .savectl .sq b { font-size: 20px; }
 .savectl .sq small { font-size: 12px; font-weight: 700; color: #111; }
-.panel h2 .hbtn { font-size: 12px; padding: 5px 9px; letter-spacing: 0; text-transform: none; color: var(--text); }
+.panel h2 .hbtn { font-size: 13px; padding: 7px 11px; letter-spacing: 0; text-transform: none; background: var(--accent); border-color: var(--accent); color: #111; font-weight: 700; }
 .progress { padding: 0 10px 8px; font-size: 13px; color: var(--accent2); display: none; }
 .progress.on { display: block; }
 
@@ -149,7 +149,8 @@ main {
 
 /* ── timeline ─────────────────────────── */
 .timeline { padding: 6px 16px 0; }
-.transport .right { grid-column: 3; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 14px; }
+.transport .right { grid-column: 3; grid-row: 1; justify-self: stretch; display: flex; align-items: center; gap: 14px; }
+.transport .right .star { margin: 0 auto; }
 .transport .star { width: 52px; height: 52px; padding: 0; font-size: 28px; color: var(--star); border-radius: 10px; }
 .transport .dur { font-size: 22px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
 .speed .arr { color: var(--accent); }
@@ -189,9 +190,12 @@ main {
 .speed .arr { border-radius: 8px 0 0 8px; }
 .speed #spUp { border-radius: 0 8px 8px 0; }
 .speed button { padding: 12px 16px; font-size: 20px; line-height: 1; }
+.speed { background: var(--surf2); border: 1px solid var(--surf3); border-radius: 8px; }
+.speed .arr { background: none; border: none; padding: 12px 4px 12px 14px; }
+.speed #spUp { padding: 12px 14px 12px 4px; }
 .speed .val {
-  min-width: 86px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent2);
-  padding: 12px 8px; font-size: 20px; background: var(--surf2); border: 1px solid var(--surf3); border-left: none; border-right: none; border-radius: 0;
+  min-width: 0; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent2);
+  padding: 12px 2px; font-size: 20px; background: none; border: none; border-radius: 0;
 }
 .speedmenu {
   position: fixed; z-index: 20; background: var(--surface); border: 1px solid var(--surf3); border-radius: 10px;
@@ -238,6 +242,7 @@ dialog .line button { flex: none; padding: 9px 14px; }
   .transport .nav { padding: 8px 4px; }
   .speed { grid-column: 1; grid-row: auto; justify-self: center; }
   .transport .right { grid-column: 1; grid-row: auto; justify-self: center; }
+  .transport .right .star { margin: 0; }
   .bigtime { font-size: 24px; }
   .markctl .sq, .savectl .sq { width: 48px; height: 48px; }
   .markctl .grp { gap: 8px; }
@@ -321,9 +326,9 @@ dialog .line button { flex: none; padding: 9px 14px; }
     <button class="skip" data-skip="10">+10</button>
     <button class="skip" data-skip="30">+30</button>
     <button class="nav" id="btnNext" title="Наступний файл">⏭</button>
-    <button id="btnMark" class="star" title="Поставити мітку на поточній позиції  ( M )">★</button>
    </div>
     <div class="right">
+      <button id="btnMark" class="star" title="Поставити мітку на поточній позиції  ( M )">★</button>
       <span class="dur" id="tDur">00:00:00</span>
     </div>
     <div class="speed">
@@ -1202,7 +1207,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v20';
+const APP_VER = 'v21';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
