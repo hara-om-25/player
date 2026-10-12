@@ -690,13 +690,56 @@ const dur = () => (isFinite(audio.duration) ? audio.duration : 0);
 const hasTrack = () => cur >= 0;
 
 /* ═════════ плейлист ═════════ */
+/* Самі аудіофайли зберігаються в IndexedDB, а перелік і поточний файл — у
+   localStorage, тож після закриття чи повторного запуску плеєр відкривається
+   з тими самими файлами, на тому самому місці. */
+const idb = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    const r = indexedDB.open('markplayer', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('files');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  }));
+  const tx = (mode, fn) => open().then(db => new Promise((res, rej) => {
+    const t = db.transaction('files', mode), st = t.objectStore('files');
+    const out = fn(st);
+    t.oncomplete = () => res(out && out.result);
+    t.onerror = t.onabort = () => rej(t.error);
+  }));
+  return {
+    put: (key, file) => tx('readwrite', st => st.put(file, key)),
+    del: key => tx('readwrite', st => st.delete(key)),
+    get: key => tx('readonly', st => st.get(key)),
+  };
+})();
+function saveSession() {
+  setSetting('session', { keys: tracks.map(t => t.key), cur: cur >= 0 ? tracks[cur].key : null });
+}
+async function restoreSession() {
+  const ses = getSetting('session', null);
+  if (!ses || !ses.keys || !ses.keys.length) return;
+  for (const key of ses.keys) {
+    try {
+      const f = await idb.get(key);
+      if (f) tracks.push({ file: f, url: URL.createObjectURL(f), key });
+    } catch {}
+  }
+  const i = tracks.findIndex(t => t.key === ses.cur);
+  if (tracks.length) openTrack(i >= 0 ? i : 0); else renderAll();
+  if (tracks.length < ses.keys.length) toast('Частину файлів не вдалося відновити — додайте їх знову');
+  saveSession();
+}
 function addFiles(files) {
   const first = tracks.length;
   for (const f of files) {
     if (!/^(audio|video)\//.test(f.type) && !/\.(mp3|m4a|aac|ogg|oga|opus|wav|flac|amr|3gp|webm|mp4|wma)$/i.test(f.name)) continue;
     if (tracks.some(t => t.key === fileKey(f))) continue;
-    tracks.push({ file: f, url: URL.createObjectURL(f), key: fileKey(f) });
+    const t = { file: f, url: URL.createObjectURL(f), key: fileKey(f) };
+    tracks.push(t);
+    idb.put(t.key, f).catch(() => toast('Не вистачило місця, щоб запам\'ятати «' + f.name + '» — після перезапуску його доведеться додати знову'));
   }
+  saveSession();
   renderPlaylist();
   if (cur < 0 && tracks.length > first) openTrack(first);
 }
@@ -725,12 +768,14 @@ $('playlist').addEventListener('click', e => {
     save();
     URL.revokeObjectURL(tracks[i].url);
     decodedCache.delete(tracks[i].key);
+    idb.del(tracks[i].key).catch(() => {});
     tracks.splice(i, 1);
     if (i === cur) {
       audio.pause(); audio.removeAttribute('src'); audio.load();
       cur = -1; data = null;
       if (tracks.length) openTrack(Math.min(i, tracks.length - 1)); else renderAll();
     } else { if (i < cur) cur--; renderPlaylist(); }
+    saveSession();
     return;
   }
   const it = e.target.closest('.item');
@@ -743,7 +788,10 @@ function openTrack(i, autoplay) {
   cur = i;
   const t = tracks[i];
   data = load(t.key);
-  selStart = selEnd = null; clipStopAt = null;
+  selStart = data.sel ? data.sel[0] : null;      // позначки [ ] теж відновлюються
+  selEnd = data.sel ? data.sel[1] : null;
+  clipStopAt = null;
+  saveSession();
   audio.src = t.url;
   audio.playbackRate = speed;
   audio.onloadedmetadata = () => {
@@ -904,6 +952,7 @@ function setSel(s, e) {
   renderSel();
 }
 function renderSel() {
+  if (data && (String(data.sel) !== String([selStart, selEnd]))) { data.sel = [selStart, selEnd]; save(); }
   $('lblStart').textContent = selStart == null ? 'початок' : fmt(selStart, true);
   $('lblEnd').textContent = selEnd == null ? 'кінець' : fmt(selEnd, true);
   $('btnStart').classList.toggle('set', selStart != null);
@@ -1094,11 +1143,16 @@ if ('mediaSession' in navigator) {
     ms.setActionHandler('nexttrack', () => openTrack(cur + 1, true));
   } catch {}
 }
-addEventListener('beforeunload', () => { if (data) { data.pos = audio.currentTime; save(); } });
+// Android може закрити застосунок без попередження — тому зберігаємо позицію,
+// щойно плеєр ховається (згорнули, перемкнулись, закрили)
+const savePos = () => { if (data) { data.pos = audio.currentTime; save(); } saveSession(); };
+addEventListener('beforeunload', savePos);
+addEventListener('pagehide', savePos);
+document.addEventListener('visibilitychange', () => { if (document.hidden) savePos(); });
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v14';
+const APP_VER = 'v15';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -1132,6 +1186,7 @@ if ('launchQueue' in window) {
 
 setSpeed(speed);
 renderAll();
+restoreSession();
 </script>
 </body>
 </html>
