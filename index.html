@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Плеєр з мітками</title>
+<title>Плеєр ХАРА ОМ</title>
 <meta name="theme-color" content="#151618">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -110,6 +110,12 @@ main {
 .clipctl button.save b { font-size: 22px; }
 .clipctl button.set { border-color: var(--clip); }
 .clipctl button.set small { color: var(--clip); }
+.markctl { align-items: center; }
+.bigtime { text-align: center; font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.savectl { display: flex; justify-content: flex-end; }
+.savectl button { width: 34%; min-width: 150px; }
+.starrow { border-top: none; padding-top: 0; }
+.panel h2 .hbtn { font-size: 12px; padding: 5px 9px; letter-spacing: 0; text-transform: none; color: var(--text); }
 .progress { padding: 0 10px 8px; font-size: 13px; color: var(--accent2); display: none; }
 .progress.on { display: block; }
 
@@ -150,7 +156,7 @@ main {
   width: 58px; height: 58px; border-radius: 50%; font-size: 24px;
   background: var(--accent); border-color: var(--accent); color: #111;
 }
-.speed { display: flex; align-items: center; gap: 4px; grid-column: 3; justify-self: end; }
+.speed { display: flex; align-items: center; gap: 4px; grid-column: 1; grid-row: 1; justify-self: start; }
 .speed button { padding: 8px 10px; }
 .speed .val {
   min-width: 62px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--accent2);
@@ -199,7 +205,8 @@ dialog .line button { flex: none; padding: 9px 14px; }
   .transport .mid { grid-column: 1; gap: 4px; }
   .transport .skip { min-width: 0; flex: 1; padding: 10px 2px; }
   .transport .nav { padding: 8px 4px; }
-  .speed { grid-column: 1; }
+  .speed { grid-column: 1; grid-row: auto; justify-self: center; }
+  .bigtime { font-size: 24px; }
   .pfoot .sq { width: 48px; height: 48px; }
   .footer { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--surf3); }
 }
@@ -216,11 +223,8 @@ dialog .line button { flex: none; padding: 9px 14px; }
 
 <header>
   <svg class="logo" viewBox="-39.83 -39.83 79.66 79.66" fill="currentColor" aria-hidden="true"><path d="M2.00 -4.83 L11.00 -13.83 L11.00 -39.83 L2.00 -30.83 Z M-2.00 -4.83 L-11.00 -13.83 L-11.00 -39.83 L-2.00 -30.83 Z M-4.83 -2.00 L-13.83 -11.00 L-39.83 -11.00 L-30.83 -2.00 Z M-4.83 2.00 L-13.83 11.00 L-39.83 11.00 L-30.83 2.00 Z M-2.00 4.83 L-11.00 13.83 L-11.00 39.83 L-2.00 30.83 Z M2.00 4.83 L11.00 13.83 L11.00 39.83 L2.00 30.83 Z M4.83 2.00 L13.83 11.00 L39.83 11.00 L30.83 2.00 Z M4.83 -2.00 L13.83 -11.00 L39.83 -11.00 L30.83 -2.00 Z M26.00 -33.50 L24.15 -28.55 L18.87 -28.32 L23.00 -25.03 L21.59 -19.93 L26.00 -22.85 L30.41 -19.93 L29.00 -25.03 L33.13 -28.32 L27.85 -28.55 Z"/></svg>
-  <h1>Плеєр <span class="now" id="nowTitle"></span></h1>
+  <h1>Плеєр ХАРА ОМ <span class="now" id="nowTitle"></span></h1>
   <button id="btnInstall" class="accent" title="Встановити як окремий застосунок">Встановити</button>
-  <button id="btnBackup" title="Зберегти всі мітки й фрагменти у файл (резервна копія)">⤓ Копія</button>
-  <button id="btnRestore" title="Відновити мітки й фрагменти з резервної копії">⤒ Відновити</button>
-  <input type="file" id="restoreInput" accept=".json,application/json" hidden>
   <span class="ver" id="ver"></span>
 </header>
 
@@ -235,19 +239,26 @@ dialog .line button { flex: none; padding: 9px 14px; }
 
   <!-- мітки -->
   <section class="panel marks">
-    <h2><span>Мітки</span></h2>
+    <h2><span>Мітки</span>
+      <button id="btnBackup" class="hbtn" title="Зберегти всі мітки й фрагменти у файл (резервна копія)">⤓ Копія</button>
+      <button id="btnRestore" class="hbtn" title="Відновити мітки й фрагменти з резервної копії">⤒ Відновити</button>
+      <input type="file" id="restoreInput" accept=".json,application/json" hidden>
+    </h2>
     <div class="list" id="markList"></div>
-    <div class="pfoot right"><button id="btnMark" class="sq star" title="Поставити мітку на поточній позиції  ( M )">★</button></div>
+    <div class="pfoot right starrow"><button id="btnMark" class="sq star" title="Поставити мітку на поточній позиції  ( M )">★</button></div>
+    <div class="clipctl markctl">
+      <button id="btnStart" title="Початок фрагмента = поточна позиція  ( [ )"><b>[</b><small id="lblStart">початок</small></button>
+      <div class="bigtime" id="tCur">00:00:00</div>
+      <button id="btnEnd" title="Кінець фрагмента = поточна позиція  ( ] )"><b>]</b><small id="lblEnd">кінець</small></button>
+    </div>
   </section>
   <!-- фрагменти (окремі mp3) -->
   <section class="panel clips">
     <h2><span>Фрагменти → MP3</span></h2>
     <div class="list" id="clipList"></div>
     <div class="progress" id="progress"></div>
-    <div class="clipctl">
-      <button id="btnStart" title="Початок фрагмента = поточна позиція  ( [ )"><b>[</b><small id="lblStart">початок</small></button>
+    <div class="clipctl savectl">
       <button id="btnSaveClip" class="save accent" title="Зберегти фрагмент як MP3"><b>⬇</b><small style="color:#111">зберегти mp3</small></button>
-      <button id="btnEnd" title="Кінець фрагмента = поточна позиція  ( ] )"><b>]</b><small id="lblEnd">кінець</small></button>
     </div>
   </section>
 
@@ -262,7 +273,7 @@ dialog .line button { flex: none; padding: 9px 14px; }
       <div class="fill" id="fill"></div>
       <div class="knob" id="knob"></div>
     </div>
-    <div class="times"><span class="cur" id="tCur">0:00</span><span id="tDur">0:00</span></div>
+    <div class="times"><span></span><span id="tDur">00:00:00</span></div>
   </div>
 
   <div class="transport">
@@ -660,6 +671,10 @@ function getSetting(k, d) { try { const v = localStorage.getItem('markplayer.' +
 function setSetting(k, v) { try { localStorage.setItem('markplayer.' + k, JSON.stringify(v)); } catch {} }
 
 /* ═════════ утиліти ═════════ */
+function hms(s) {                 // завжди 00:00:00
+  s = isFinite(s) && s > 0 ? Math.floor(s) : 0;
+  return [s / 3600, s % 3600 / 60, s % 60].map(v => String(Math.floor(v)).padStart(2, '0')).join(':');
+}
 function fmt(s, ms) {
   if (!isFinite(s) || s < 0) s = 0;
   const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = Math.floor(s % 60);
@@ -801,7 +816,7 @@ function openTrack(i, autoplay) {
     if (autoplay) audio.play().catch(() => {});
   };
   $('nowTitle').textContent = '· ' + t.file.name;
-  document.title = t.file.name + ' — Плеєр';
+  document.title = t.file.name + ' — Плеєр ХАРА ОМ';
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({ title: t.file.name });
   }
@@ -879,8 +894,8 @@ function updateTime() {
   const d = dur(), t = audio.currentTime || 0, p = d ? t / d * 100 : 0;
   $('fill').style.width = p + '%';
   $('knob').style.left = p + '%';
-  $('tCur').textContent = fmt(t);
-  $('tDur').textContent = fmt(d);
+  $('tCur').textContent = hms(t);
+  $('tDur').textContent = hms(d);
   if (data && Date.now() - lastPosSave > 5000 && !audio.paused) { data.pos = t; save(); lastPosSave = Date.now(); }
 }
 setInterval(() => { if (!audio.paused) updateTime(); }, 250);
@@ -987,7 +1002,7 @@ function renderClips() {
   const el = $('clipList');
   if (!data) { el.innerHTML = '<div class="empty">Немає відкритого файлу</div>'; return; }
   if (!data.clips.length) {
-    el.innerHTML = '<div class="empty">Позначте <b>[</b> початок і <b>]</b> кінець, потім <b>⬇</b> — фрагмент збережеться окремим MP3 з вашою назвою.</div>';
+    el.innerHTML = '<div class="empty">Позначте <b>[</b> початок і <b>]</b> кінець (під мітками), потім <b>⬇</b> — фрагмент збережеться окремим MP3 з вашою назвою.</div>';
     return;
   }
   el.innerHTML = data.clips.map((c, i) => `
@@ -1152,7 +1167,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v15';
+const APP_VER = 'v16';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
