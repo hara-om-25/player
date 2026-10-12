@@ -228,6 +228,12 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14
     <div class="pfoot"><button id="btnAdd" class="sq accent" title="Додати файли">+</button></div>
   </section>
 
+  <!-- мітки -->
+  <section class="panel marks">
+    <h2><span>Мітки</span></h2>
+    <div class="list" id="markList"></div>
+    <div class="pfoot right"><button id="btnMark" class="sq star" title="Поставити мітку на поточній позиції  ( M )">★</button></div>
+  </section>
   <!-- фрагменти (окремі mp3) -->
   <section class="panel clips">
     <h2><span>Фрагменти → MP3</span></h2>
@@ -240,12 +246,6 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14
     </div>
   </section>
 
-  <!-- мітки -->
-  <section class="panel marks">
-    <h2><span>Мітки</span></h2>
-    <div class="list" id="markList"></div>
-    <div class="pfoot right"><button id="btnMark" class="sq star" title="Поставити мітку на поточній позиції  ( M )">★</button></div>
-  </section>
 </main>
 
 <div class="footer">
@@ -871,8 +871,6 @@ function renderMarks() {
       <span class="t">${fmt(m.t)}</span>
       <span class="name" title="${esc(m.name)}">${esc(m.name)}</span>
       <span class="acts">
-        <button data-a="clipstart" title="Початок фрагмента з цієї мітки">[</button>
-        <button data-a="clipend" title="Кінець фрагмента на цій мітці">]</button>
         <button data-a="ren" title="Перейменувати">✎</button>
         <button data-a="del" title="Видалити">✕</button>
       </span>
@@ -888,9 +886,7 @@ $('markList').addEventListener('click', async e => {
   } else if (a === 'del') {
     if (!confirm('Видалити мітку «' + m.name + '»?')) return;
     data.marks.splice(+it.dataset.i, 1); save(); renderMarks(); renderBar(); renderPlaylist();
-  } else if (a === 'clipstart') { setSel(m.t, null); }
-  else if (a === 'clipend') { setSel(null, m.t); }
-  else { clipStopAt = null; seek(m.t); }
+  } else { clipStopAt = null; seek(m.t); }
 });
 $('btnMark').onclick = addMark;
 
@@ -1097,7 +1093,7 @@ addEventListener('beforeunload', () => { if (data) { data.pos = audio.currentTim
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v12';
+const APP_VER = 'v13';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
