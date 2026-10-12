@@ -114,7 +114,12 @@ main {
 .item .badge { font-size: 14px; color: var(--star); white-space: nowrap; }
 .item .acts { display: flex; gap: 4px; flex: none; }
 .item .acts button { background: none; border: none; padding: 6px 9px; color: var(--dim); font-size: 22px; line-height: 1; }
-.item .acts button:hover { color: var(--text); background: var(--surf3); }
+.item .acts button:hover { background: var(--surf3); }
+/* кольори значків у списках */
+.item .acts [data-a="play"] { color: #4caf50; }
+.item .acts [data-a="dl"]   { color: var(--accent); }
+.item .acts [data-a="ren"]  { color: #42a5f5; }
+.item .acts [data-a="del"], .item .acts [data-rm] { color: #e53935; }
 .item.active .name { color: var(--accent2); }
 
 /* clips panel */
@@ -151,7 +156,7 @@ main {
 .timeline { padding: 6px 16px 0; }
 .transport .right { grid-column: 3; grid-row: 1; justify-self: stretch; display: flex; align-items: center; gap: 14px; }
 .transport .right .star { margin: 0 auto; }
-.transport .star { width: 52px; height: 52px; padding: 0; font-size: 28px; color: var(--star); border-radius: 10px; }
+.transport .star { width: 64px; height: 64px; padding: 0; font-size: 38px; color: var(--star); border-radius: 10px; }
 .transport .dur { font-size: 22px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
 .speed .arr { color: var(--accent); }
 .times { display: flex; justify-content: space-between; font-size: 22px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
@@ -255,7 +260,7 @@ dialog .line button { flex: none; padding: 9px 14px; }
   .transport .skip { font-size: 13px; padding: 10px 0; border-radius: 6px; }
   .transport .nav { padding: 8px 2px; font-size: 15px; }
   .transport .play { width: 46px; height: 46px; font-size: 19px; flex: none; }
-  .transport .star { width: 38px; height: 38px; font-size: 20px; flex: none; }
+  .transport .star { width: 48px; height: 48px; font-size: 28px; flex: none; }
 }
 </style>
 </head>
@@ -279,9 +284,9 @@ dialog .line button { flex: none; padding: 9px 14px; }
   <!-- мітки -->
   <section class="panel marks">
     <h2>
-      <i class="l"><button id="btnBackup" class="hbtn" title="Зберегти всі мітки й фрагменти у файл (резервна копія)">⤓ Копія</button></i>
+      <i class="l"><button id="btnBackup" class="hbtn" title="Зберегти всі мітки й фрагменти у файл (резервна копія)">Копіювати</button></i>
       <span>Мітки</span>
-      <i class="r"><button id="btnRestore" class="hbtn" title="Відновити мітки й фрагменти з резервної копії">⤒ Відновити</button></i>
+      <i class="r"><button id="btnRestore" class="hbtn" title="Відновити мітки й фрагменти з резервної копії">Відновити</button></i>
       <input type="file" id="restoreInput" accept=".json,application/json" hidden>
     </h2>
     <div class="list" id="markList"></div>
@@ -1207,7 +1212,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v21';
+const APP_VER = 'v22';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
