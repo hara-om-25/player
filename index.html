@@ -168,13 +168,18 @@ main {
 
 /* ── dialog ───────────────────────────── */
 dialog {
-  margin: auto; background: var(--surface); color: var(--text); border: 1px solid var(--surf3);
-  border-radius: 14px; padding: 18px; width: min(420px, calc(100vw - 32px));
+  /* вікно — вгорі екрана, щоб його не закривала екранна клавіатура */
+  margin: calc(12px + env(safe-area-inset-top)) auto auto;
+  background: var(--surface); color: var(--text); border: 1px solid var(--surf3);
+  border-radius: 14px; padding: 16px 18px; width: min(640px, calc(100vw - 32px));
 }
 dialog::backdrop { background: rgba(0,0,0,.6); }
 dialog h3 { font-size: 16px; margin-bottom: 4px; }
 dialog p { color: var(--dim); font-size: 13px; margin-bottom: 12px; }
 dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+dialog .line { display: flex; gap: 8px; align-items: stretch; }
+dialog .line input { flex: 1; min-width: 0; }
+dialog .line button { flex: none; padding: 9px 14px; }
 
 .toast {
   position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%);
@@ -288,8 +293,8 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14
   <form method="dialog" id="dlgForm">
     <h3 id="dlgTitle"></h3>
     <p id="dlgText"></p>
-    <input type="text" id="dlgInput" autocomplete="off">
-    <div class="row">
+    <div class="line">
+      <input type="text" id="dlgInput" autocomplete="off">
       <button value="cancel" type="button" id="dlgCancel">Скасувати</button>
       <button value="ok" class="accent" id="dlgOk">OK</button>
     </div>
@@ -1093,7 +1098,7 @@ addEventListener('beforeunload', () => { if (data) { data.pos = audio.currentTim
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v13';
+const APP_VER = 'v14';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
