@@ -85,16 +85,18 @@ main {
 
 .item {
   display: flex; align-items: center; gap: 8px;
-  padding: 8px 8px; border-radius: 8px; cursor: pointer;
+  padding: 10px 8px; border-radius: 8px; cursor: pointer; font-size: 19px;
 }
 .item:hover { background: var(--surf2); }
 .item.active { background: rgba(255,210,63,.12); }
-.item .num { color: var(--dim); font-variant-numeric: tabular-nums; min-width: 1.6em; text-align: right; font-size: 13px; }
+.item .num { color: var(--dim); font-variant-numeric: tabular-nums; min-width: 1.6em; text-align: right; font-size: 16px; }
 .item .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.item .meta { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.item .badge { font-size: 11px; color: var(--star); white-space: nowrap; }
-.item .acts { display: flex; gap: 2px; flex: none; }
-.item .acts button { background: none; border: none; padding: 5px 6px; color: var(--dim); font-size: 15px; }
+.item .col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.item .col .name { flex: none; }
+.item .meta { color: var(--dim); font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.item .badge { font-size: 14px; color: var(--star); white-space: nowrap; }
+.item .acts { display: flex; gap: 4px; flex: none; }
+.item .acts button { background: none; border: none; padding: 6px 9px; color: var(--dim); font-size: 22px; line-height: 1; }
 .item .acts button:hover { color: var(--text); background: var(--surf3); }
 .item.active .name { color: var(--accent2); }
 
@@ -110,22 +112,28 @@ main {
 .clipctl button.save b { font-size: 22px; }
 .clipctl button.set { border-color: var(--clip); }
 .clipctl button.set small { color: var(--clip); }
-.markctl { align-items: center; }
-.bigtime { text-align: center; font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.markctl { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.markctl .grp { grid-column: 2; display: flex; align-items: center; gap: 12px; }
+.markctl .sq, .savectl .sq { width: 56px; height: 56px; padding: 0; border-radius: 10px; }
+.markctl .br { font-size: 26px; font-weight: 700; line-height: 1; }
+.markctl .br.set { border-color: var(--clip); color: var(--clip); }
+.markctl .star { grid-column: 3; justify-self: end; color: var(--star); font-size: 30px; }
+.bigtime { text-align: center; font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: var(--accent); }
 .savectl { display: flex; justify-content: flex-end; }
-.savectl button { width: 34%; min-width: 150px; }
-.starrow { border-top: none; padding-top: 0; }
+.savectl .sq { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1; }
+.savectl .sq b { font-size: 20px; }
+.savectl .sq small { font-size: 12px; font-weight: 700; color: #111; }
 .panel h2 .hbtn { font-size: 12px; padding: 5px 9px; letter-spacing: 0; text-transform: none; color: var(--text); }
 .progress { padding: 0 10px 8px; font-size: 13px; color: var(--accent2); display: none; }
 .progress.on { display: block; }
 
 /* marks panel */
 .panel.marks h2 button.star { color: var(--star); font-size: 20px; }
-.item .t { color: var(--star); font-variant-numeric: tabular-nums; font-size: 13px; min-width: 4.2em; }
+.item .t { color: var(--star); font-variant-numeric: tabular-nums; font-size: 17px; min-width: 4.6em; }
 
 /* ── timeline ─────────────────────────── */
 .timeline { padding: 6px 16px 0; }
-.times { display: flex; justify-content: space-between; font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.times { display: flex; justify-content: space-between; font-size: 22px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
 .times .cur { color: var(--text); }
 .bar {
   position: relative; height: 34px; cursor: pointer; touch-action: none; user-select: none;
@@ -150,17 +158,18 @@ main {
   padding: 6px 12px calc(12px + env(safe-area-inset-bottom));
 }
 .transport .mid { display: flex; align-items: center; justify-content: center; gap: 8px; grid-column: 2; }
-.transport .skip { min-width: 52px; font-variant-numeric: tabular-nums; font-weight: 600; padding: 10px 6px; }
+.transport .skip { min-width: 52px; font-variant-numeric: tabular-nums; font-weight: 600; padding: 10px 6px; border-color: var(--accent); }
 .transport .nav { font-size: 18px; padding: 8px 12px; background: none; border-color: transparent; }
 .transport .play {
   width: 58px; height: 58px; border-radius: 50%; font-size: 24px;
   background: var(--accent); border-color: var(--accent); color: #111;
 }
 .speed { display: flex; align-items: center; gap: 4px; grid-column: 1; grid-row: 1; justify-self: start; }
-.speed button { padding: 8px 10px; }
+.speed { gap: 6px; }
+.speed button { padding: 12px 16px; font-size: 20px; line-height: 1; }
 .speed .val {
-  min-width: 62px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--accent2);
-  padding: 8px 6px; background: var(--surf2); border: 1px solid var(--surf3); border-radius: 8px;
+  min-width: 86px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent2);
+  padding: 12px 8px; font-size: 20px; background: var(--surf2); border: 1px solid var(--surf3); border-radius: 8px;
 }
 .speedmenu {
   position: fixed; z-index: 20; background: var(--surface); border: 1px solid var(--surf3); border-radius: 10px;
@@ -207,6 +216,8 @@ dialog .line button { flex: none; padding: 9px 14px; }
   .transport .nav { padding: 8px 4px; }
   .speed { grid-column: 1; grid-row: auto; justify-self: center; }
   .bigtime { font-size: 24px; }
+  .markctl .sq, .savectl .sq { width: 48px; height: 48px; }
+  .markctl .grp { gap: 8px; }
   .pfoot .sq { width: 48px; height: 48px; }
   .footer { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--surf3); }
 }
@@ -245,11 +256,13 @@ dialog .line button { flex: none; padding: 9px 14px; }
       <input type="file" id="restoreInput" accept=".json,application/json" hidden>
     </h2>
     <div class="list" id="markList"></div>
-    <div class="pfoot right starrow"><button id="btnMark" class="sq star" title="Поставити мітку на поточній позиції  ( M )">★</button></div>
-    <div class="clipctl markctl">
-      <button id="btnStart" title="Початок фрагмента = поточна позиція  ( [ )"><b>[</b><small id="lblStart">початок</small></button>
-      <div class="bigtime" id="tCur">00:00:00</div>
-      <button id="btnEnd" title="Кінець фрагмента = поточна позиція  ( ] )"><b>]</b><small id="lblEnd">кінець</small></button>
+    <div class="pfoot markctl">
+      <div class="grp">
+        <button id="btnStart" class="sq br" title="Початок фрагмента = поточна позиція  ( [ )">[<span id="lblStart" hidden></span></button>
+        <div class="bigtime" id="tCur">00:00:00</div>
+        <button id="btnEnd" class="sq br" title="Кінець фрагмента = поточна позиція  ( ] )">]<span id="lblEnd" hidden></span></button>
+      </div>
+      <button id="btnMark" class="sq star" title="Поставити мітку на поточній позиції  ( M )">★</button>
     </div>
   </section>
   <!-- фрагменти (окремі mp3) -->
@@ -257,8 +270,8 @@ dialog .line button { flex: none; padding: 9px 14px; }
     <h2><span>Фрагменти → MP3</span></h2>
     <div class="list" id="clipList"></div>
     <div class="progress" id="progress"></div>
-    <div class="clipctl savectl">
-      <button id="btnSaveClip" class="save accent" title="Зберегти фрагмент як MP3"><b>⬇</b><small style="color:#111">зберегти mp3</small></button>
+    <div class="pfoot savectl">
+      <button id="btnSaveClip" class="sq accent" title="Зберегти фрагмент як MP3"><b>⬇</b><small>MP3</small></button>
     </div>
   </section>
 
@@ -1008,8 +1021,8 @@ function renderClips() {
   el.innerHTML = data.clips.map((c, i) => `
     <div class="item" data-i="${i}">
       <span class="num">${i + 1}.</span>
-      <span class="name" title="${esc(c.name)}">${esc(c.name)}.mp3</span>
-      <span class="meta">${fmt(c.start)}–${fmt(c.end)}</span>
+      <span class="col"><span class="name" title="${esc(c.name)}">${esc(c.name)}.mp3</span>
+      <span class="meta">${fmt(c.start)}–${fmt(c.end)}</span></span>
       <span class="acts">
         <button data-a="play" title="Прослухати фрагмент">▶</button>
         <button data-a="dl" title="Завантажити MP3 ще раз">⬇</button>
@@ -1167,7 +1180,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v16';
+const APP_VER = 'v17';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
