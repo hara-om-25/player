@@ -772,8 +772,8 @@ function setSpeed(v) {
   setSetting('speed', speed);
   renderSpeedMenu();
 }
-function step(dir) {               // крок кнопок − / + : 0,5
-  setSpeed(Math.max(0.5, speed + dir * 0.5));
+function step(dir) {               // крок кнопок − / + : 0,05
+  setSpeed(Math.max(0.5, speed + dir * 0.05));
 }
 $('spDown').onclick = () => step(-1);
 $('spUp').onclick = () => step(1);
@@ -1097,7 +1097,7 @@ addEventListener('beforeunload', () => { if (data) { data.pos = audio.currentTim
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v10';
+const APP_VER = 'v11';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
