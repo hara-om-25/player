@@ -210,7 +210,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14
 <body>
 
 <header>
-  <svg class="logo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 4 20h16L12 2zm0 5.2L15.4 15H8.6L12 7.2z"/></svg>
+  <svg class="logo" viewBox="-39.83 -39.83 79.66 79.66" fill="currentColor" aria-hidden="true"><path d="M2.00 -4.83 L11.00 -13.83 L11.00 -39.83 L2.00 -30.83 Z M-2.00 -4.83 L-11.00 -13.83 L-11.00 -39.83 L-2.00 -30.83 Z M-4.83 -2.00 L-13.83 -11.00 L-39.83 -11.00 L-30.83 -2.00 Z M-4.83 2.00 L-13.83 11.00 L-39.83 11.00 L-30.83 2.00 Z M-2.00 4.83 L-11.00 13.83 L-11.00 39.83 L-2.00 30.83 Z M2.00 4.83 L11.00 13.83 L11.00 39.83 L2.00 30.83 Z M4.83 2.00 L13.83 11.00 L39.83 11.00 L30.83 2.00 Z M4.83 -2.00 L13.83 -11.00 L39.83 -11.00 L30.83 -2.00 Z M26.00 -33.50 L24.15 -28.55 L18.87 -28.32 L23.00 -25.03 L21.59 -19.93 L26.00 -22.85 L30.41 -19.93 L29.00 -25.03 L33.13 -28.32 L27.85 -28.55 Z"/></svg>
   <h1>Плеєр <span class="now" id="nowTitle"></span></h1>
   <button id="btnInstall" class="accent" title="Встановити як окремий застосунок">Встановити</button>
   <button id="btnBackup" title="Зберегти всі мітки й фрагменти у файл (резервна копія)">⤓ Копія</button>
@@ -1097,7 +1097,7 @@ addEventListener('beforeunload', () => { if (data) { data.pos = audio.currentTim
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v11';
+const APP_VER = 'v12';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
