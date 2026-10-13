@@ -106,7 +106,13 @@ main {
 .panel h2 .hsq.vid.on { display: flex; }
 .vidbox { display: none; background: #000; border-bottom: 1px solid var(--surf3); aspect-ratio: 16 / 9; }
 .vidbox.on { display: block; }
+.vidbox { position: relative; }
 .vidbox video { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* відтворення назад: кадри малюються сюди поверх відео */
+#revCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: none; background: #000; }
+#revCanvas.on { display: block; }
+/* допоміжне відео, з якого беруться кадри для відтворення назад (має бути на сторінці, але не видно) */
+#revVideo { position: absolute; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
 .panel h2 { min-height: 62px; }
 .list { flex: 1; overflow-y: auto; padding: 4px; }
 .empty { color: var(--dim); padding: 16px 12px; font-size: 14px; text-align: center; }
@@ -325,7 +331,7 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
     <h2><i class="l"><button id="btnAdd" class="hsq accent" title="Додати файли">+</button></i><span>Плейлист</span><i class="r"></i></h2>
     <input type="file" id="fileInput" accept="audio/*,video/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.amr,.mp4,.m4v,.webm,.mkv,.mov,.3gp" multiple hidden>
     <!-- той самий елемент грає і аудіо, і відео; для відео — екран над списком -->
-    <div class="vidbox" id="vidbox"><video id="audio" preload="metadata" playsinline></video></div>
+    <div class="vidbox" id="vidbox"><video id="audio" preload="metadata" playsinline></video><canvas id="revCanvas"></canvas><video id="revVideo" muted playsinline preload="auto"></video></div>
     <div class="list" id="playlist"></div>
   </section>
 
@@ -897,6 +903,7 @@ const isVideo = t => /^video\//.test(t.file.type) || /\.(mp4|m4v|webm|mkv|mov|3g
 function showVideo(on) { $('vidbox').classList.toggle('on', on); $('btnSaveVid').classList.toggle('on', on); }
 function openTrack(i, autoplay) {
   if (i < 0 || i >= tracks.length) return;
+  if (Rev.active) Rev.stop(false);
   if (cur >= 0 && data) { data.pos = audio.currentTime; save(); }
   cur = i;
   const t = tracks[i];
@@ -1045,6 +1052,98 @@ const jogClick = (() => {
     } catch {}
   };
 })();
+/* ── відтворення відео назад, плавно ──
+   Браузер не грає відео задом наперед, а стрибки назад рвуть картинку. Тому допоміжне
+   відео (#revVideo) програє шматок ~1 с перед поточним місцем, кадри зберігаються
+   (ImageBitmap) і показуються на #revCanvas у зворотному порядку. Поки показується
+   один шматок, готується наступний. Звук на цей час вимкнено. */
+const Rev = (() => {
+  const cv = $('revCanvas'), hv = $('revVideo'), CH = 1.5;
+  const R = { active: false, rate: 1, supported: 'requestVideoFrameCallback' in hv && 'createImageBitmap' in window };
+  let cursor = 0, chunks = [], loading = null, raf = 0, lastTs = 0, gen = 0, ctx = null, W = 0, H = 0;
+  const seekHv = t => new Promise(r => { const done = () => r(); hv.addEventListener('seeked', done, { once: true }); hv.currentTime = Math.max(0, t); setTimeout(done, 2000); });
+  // кадри відрізка [a, b], за зростанням часу
+  async function capture(a, b, myGen) {
+    if (hv.src !== audio.currentSrc) { hv.src = audio.currentSrc; await new Promise(r => { hv.addEventListener('loadeddata', r, { once: true }); setTimeout(r, 3000); }); }
+    await seekHv(a);
+    const frames = [], jobs = [];
+    await new Promise(res => {
+      const cb = (now, md) => {
+        if (myGen !== gen) return res();
+        if (md.mediaTime >= a - 0.001 && md.mediaTime <= b + 0.001) {
+          const t = md.mediaTime;
+          jobs.push(createImageBitmap(hv, { resizeWidth: W, resizeHeight: H }).then(bmp => frames.push({ t, bmp })).catch(() => {}));
+        }
+        if (md.mediaTime >= b || hv.ended) { hv.pause(); return res(); }
+        hv.requestVideoFrameCallback(cb);
+      };
+      hv.requestVideoFrameCallback(cb);
+      hv.playbackRate = Math.min(4, Math.max(1.5, R.rate * 1.6));   // готуємо швидше, ніж показуємо
+      hv.play().catch(() => res());
+      setTimeout(res, (b - a) * 1000 / hv.playbackRate + 4000);
+    });
+    await Promise.all(jobs);
+    frames.sort((x, y) => x.t - y.t);
+    return { a, b, frames };
+  }
+  const prefetch = () => {
+    const first = chunks[0];
+    if (loading || !first || first.a <= 0) return;
+    const a = Math.max(0, first.a - CH), b = first.a, g = gen;
+    loading = capture(a, b, g).then(c => { if (g === gen) chunks.unshift(c); else c.frames.forEach(f => f.bmp.close()); loading = null; });
+  };
+  function draw(ts) {
+    raf = requestAnimationFrame(draw);
+    const dt = lastTs ? Math.min(0.1, (ts - lastTs) / 1000) : 0; lastTs = ts;
+    const first = chunks[0];
+    if (!first) return;
+    // не забігаємо за підготовлені кадри — чекаємо наступний шматок
+    const floor = first.frames.length ? first.frames[0].t : first.a;
+    cursor = Math.max(cursor - dt * R.rate, loading || first.a > 0 ? floor : 0);
+    // знайти кадр з найбільшим t <= cursor
+    let fr = null;
+    for (const c of chunks) for (const f of c.frames) if (f.t <= cursor + 1e-4 && (!fr || f.t > fr.t)) fr = f;
+    if (fr) ctx.drawImage(fr.bmp, 0, 0, W, H);
+    updateTime(cursor);
+    // звільняємо пам'ять від уже показаних шматків
+    while (chunks.length > 1 && chunks[chunks.length - 1].a > cursor + 0.1) chunks.pop().frames.forEach(f => f.bmp.close());
+    if (cursor - first.a < CH * 1.9) prefetch();   // наступний шматок — заздалегідь
+    if (cursor <= 0.001 && first.a <= 0) { R.stop(false); }
+  }
+  R.start = async rate => {
+    R.active = true; R.rate = rate; gen++;
+    const g = gen;
+    cursor = audio.currentTime; lastTs = 0;
+    const box = $('vidbox').getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+    const vw = audio.videoWidth, vh = audio.videoHeight, k = Math.min(box.width * dpr / vw, box.height * dpr / vh, 1);
+    W = Math.max(2, Math.round(vw * k)); H = Math.max(2, Math.round(vh * k));
+    cv.width = W; cv.height = H; ctx = cv.getContext('2d');
+    // поточний кадр одразу на полотно, щоб не блимало
+    try { ctx.drawImage(audio, 0, 0, W, H); } catch {}
+    cv.style.objectFit = 'contain'; cv.classList.add('on');
+    audio.pause();
+    chunks = [];
+    const c = await capture(Math.max(0, cursor - CH), cursor, g);
+    if (g !== gen) { c.frames.forEach(f => f.bmp.close()); return; }
+    chunks = [c];
+    prefetch();
+    raf = requestAnimationFrame(draw);
+  };
+  R.setRate = rate => { R.rate = rate; };
+  // stop(resume): кінець відтворення назад; resume — грати далі вперед з цього місця
+  R.stop = resume => {
+    if (!R.active) return;
+    gen++; cancelAnimationFrame(raf); raf = 0; hv.pause();
+    chunks.forEach(c => c.frames.forEach(f => f.bmp.close())); chunks = [];
+    const t = cursor;
+    audio.currentTime = t;
+    const hide = () => { cv.classList.remove('on'); };
+    audio.addEventListener('seeked', hide, { once: true }); setTimeout(hide, 600);
+    R.active = false;
+    if (resume) audio.play().catch(() => {}); else { setPlayIcon(false); if (data) { data.pos = t; save(); } }
+  };
+  return R;
+})();
 // Тривалість кадру відео: міряємо під час відтворення (requestVideoFrameCallback),
 // поки не відомо — 1/30 с (типове відео з телефона)
 let frameDur = 1 / 30, frameMeasured = false;
@@ -1090,7 +1189,10 @@ const JOG_LIM = 45 - Math.asin(14 / 72) * 180 / Math.PI;
   const applyShuttle = () => {
     if (rate >= 0) {
       stopReverse();
+      if (Rev.active) Rev.stop(true);
       audio.playbackRate = rate === 0 ? speed : Math.max(rate, speed);
+    } else if (audio.videoWidth && Rev.supported) {
+      Rev.active ? Rev.setRate(-rate) : Rev.start(-rate);
     } else if (!revT) {
       audio.muted = true; audio.playbackRate = 0.25;
       revT = setInterval(() => {
@@ -1136,7 +1238,7 @@ const JOG_LIM = 45 - Math.asin(14 / 72) * 180 / Math.PI;
   const end = () => {
     if (last === null) return;
     last = null;
-    if (mode === 'shuttle') { rate = 0; stopReverse(); audio.playbackRate = speed; }
+    if (mode === 'shuttle') { rate = 0; stopReverse(); if (Rev.active) Rev.stop(true); audio.playbackRate = speed; }
     // відпустив — регулятор плавно повертається у вихідне положення (мітка вгору-ліворуч)
     const g = $('jogRot'), back = Math.min(600, 250 + Math.abs(jogAngle) * 2);
     g.style.transition = `transform ${back}ms cubic-bezier(.2,.8,.3,1)`;
@@ -1147,15 +1249,15 @@ const JOG_LIM = 45 - Math.asin(14 / 72) * 180 / Math.PI;
 })();
 
 audio.onplay = () => setPlayIcon(true);
-audio.onpause = () => { setPlayIcon(false); if (data) { data.pos = audio.currentTime; save(); } };
+audio.onpause = () => { if (Rev.active) return; setPlayIcon(false); if (data) { data.pos = audio.currentTime; save(); } };
 audio.onended = () => { if (data) { data.pos = 0; save(); } if (cur < tracks.length - 1) openTrack(cur + 1, true); };
 audio.ontimeupdate = () => {
   if (clipStopAt != null && audio.currentTime >= clipStopAt) { audio.pause(); clipStopAt = null; }
   updateTime();
 };
 let lastPosSave = 0;
-function updateTime() {
-  const d = dur(), t = audio.currentTime || 0, p = d ? t / d * 100 : 0;
+function updateTime(tt) {
+  const d = dur(), t = tt ?? (audio.currentTime || 0), p = d ? t / d * 100 : 0;
   $('fill').style.width = p + '%';
   $('knob').style.left = p + '%';
   $('tCur').textContent = hms(t);
@@ -1672,7 +1774,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v43';
+const APP_VER = 'v44';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
