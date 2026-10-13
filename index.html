@@ -1504,17 +1504,27 @@ $('btnSaveVid').onclick = async () => { const c = await newClip('Зберегт�
 // zoomReset. Відео: два пальці (або коліщатко миші) — більше/менше, один палець — посунути збільшене,
 // подвійний дотик — на весь екран і назад. Сторінка сама при цьому не масштабується.
 (() => {
-  const box = $('vidbox'), MIN = 0.3, MAX = 8, pts = new Map();
+  const box = $('vidbox'), MAX = 8, pts = new Map();
   let s = 1, tx = 0, ty = 0, g = null, lastTap = 0, lastXY = null, moved = false;
+  // розмір картинки на екрані при s = 1 (з урахуванням cover/contain)
+  const img = () => {
+    const r = box.getBoundingClientRect(), vw = audio.videoWidth || r.width, vh = audio.videoHeight || r.height;
+    const k = (fitMode === 'cover' ? Math.max : Math.min)(r.width / vw, r.height / vh);
+    return { W: r.width, H: r.height, w: vw * k, h: vh * k };
+  };
+  // менше не можна, ніж поки вся картинка не дійде краями до країв екрана
+  const MIN = () => { const m = img(); return Math.min(1, m.W / m.w, m.H / m.h); };
   const apply = () => {
-    if (Math.abs(s - 1) < 0.04) { s = 1; if (Math.hypot(tx, ty) < 12) tx = ty = 0; }
-    const r = box.getBoundingClientRect(), mx = r.width * Math.max(s, 1) / 2, my = r.height * Math.max(s, 1) / 2;
-    tx = Math.max(-mx, Math.min(mx, tx)); ty = Math.max(-my, Math.min(my, ty));
+    const lo = MIN();
+    s = Math.max(lo, Math.min(MAX, s));
+    if (s - lo < 0.02) s = lo; else if (Math.abs(s - 1) < 0.04) s = 1;
+    const m = img(), mx = Math.max(0, (m.w * s - m.W) / 2), my = Math.max(0, (m.h * s - m.H) / 2);
+    tx = Math.max(-mx, Math.min(mx, tx)); ty = Math.max(-my, Math.min(my, ty));   // без порожніх полів
     box.style.setProperty('--zs', s); box.style.setProperty('--zx', tx + 'px'); box.style.setProperty('--zy', ty + 'px');
   };
   const rel = (x, y) => { const r = box.getBoundingClientRect(); return [x - r.left - r.width / 2, y - r.top - r.height / 2]; };
   const zoomAt = (ns, px, py) => {          // точка (px,py) лишається під пальцями
-    ns = Math.max(MIN, Math.min(MAX, ns));
+    ns = Math.max(MIN(), Math.min(MAX, ns));
     const cx = (px - tx) / s, cy = (py - ty) / s;
     s = ns; tx = px - cx * s; ty = py - cy * s;
   };
@@ -1978,7 +1988,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v51';
+const APP_VER = 'v52';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
