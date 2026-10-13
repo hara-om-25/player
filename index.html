@@ -165,7 +165,8 @@ body.fs .panel.stage { position: fixed; inset: 0; z-index: 12; border: 0; border
 body.fs .vidbox { flex: 1; aspect-ratio: auto; max-height: none; background: #000; }
 body.fs .markctl.ovl { bottom: calc(14px + env(safe-area-inset-bottom)); }
 body.fs .spdrow { position: fixed; z-index: 16; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); padding: 0; border: 0; background: none; }
-body.fs .spdrow .speed button { background: rgba(0,0,0,.55); }
+body.fs .spdrow .speed button, body.fs #btnMark { background: rgba(0,0,0,.45); border-color: rgba(255,255,255,.18); }
+body.fs .spdrow .speed { background: none; border: 0; box-shadow: none; }
 body.fs #btnMark { position: fixed; z-index: 16; right: 12px; bottom: calc(var(--jogR) * 1.15 + 12px); margin: 0; }
 /* сторінка не масштабується пальцями; масштабується лише відео (жести на #vidbox) */
 html, body { touch-action: pan-x pan-y; }
@@ -2015,7 +2016,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v53';
+const APP_VER = 'v54';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
