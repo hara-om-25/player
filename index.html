@@ -1074,12 +1074,18 @@ $('btnTrim').onclick = () => {
   if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
   const t = audio.currentTime;
   if (t - T0() < 0.5) return toast('Перемотайте туди, звідки має починатися файл');
-  data.trim = t; save();
+  data.trim = t;
+  // шматок, що лишився (від обрізки до кінця), одразу йде у «Фрагменти» — можна зберегти ⬇ / 🎬
+  const base = tracks[cur].file.name.replace(/\.[^.]+$/, '');
+  data.clips.push({ name: base + ' з ' + hms(t), start: t, end: dur(), fromTrim: true });
+  save();
   $('btnUntrim').classList.add('on'); layoutActions();
-  renderAll(); toast('Обрізано: файл тепер починається з ' + hms(t) + '. ↺ — повернути');
+  renderAll(); toast('Обрізано: файл тепер починається з ' + hms(t) + ', шматок — у «Фрагментах». ↺ — повернути');
 };
 $('btnUntrim').onclick = () => {
   if (!data) return;
+  const t = data.trim;              // прибираємо фрагмент, який додала ця обрізка
+  data.clips = data.clips.filter(c => !(c.fromTrim && Math.abs(c.start - t) < 1e-3));
   data.trim = 0; save();
   $('btnUntrim').classList.remove('on'); layoutActions();
   renderAll(); toast('Обрізане повернуто');
@@ -2046,7 +2052,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v57';
+const APP_VER = 'v58';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
