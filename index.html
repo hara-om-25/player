@@ -65,6 +65,7 @@ header {
 header .logo { width: 26px; height: 26px; color: var(--accent); flex: none; }
 header h1 { font-size: 17px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 header .now { color: var(--dim); font-weight: 400; }
+header .hdur { font-size: 20px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
 header button { padding: 6px 9px; font-size: 13px; }
 header .ver { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; background: none; border: 1px solid transparent; padding: 6px 8px; }
 header .ver:hover { border-color: var(--surf3); color: var(--text); }
@@ -179,19 +180,28 @@ main {
   background: var(--accent); box-shadow: 0 0 0 4px rgba(255,210,63,.3); left: 0;
 }
 
-/* ── transport ───────────────────────── */
+/* ── нижній рядок і регулятор прокрутки ── */
+:root { --jogR: min(230px, 34vh); }
+.timeline { padding-right: calc(var(--jogR) + 10px); }
 .transport {
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
-  padding: 6px 12px calc(12px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 6px calc(var(--jogR) + 12px) calc(12px + env(safe-area-inset-bottom)) 12px;
 }
-.transport .mid { display: flex; align-items: center; justify-content: center; gap: 8px; grid-column: 2; }
-.transport .skip { min-width: 52px; font-variant-numeric: tabular-nums; font-weight: 600; padding: 10px 6px; border-color: var(--accent); }
-.transport .nav { font-size: 18px; padding: 8px 12px; background: none; border-color: transparent; }
-.transport .play {
-  width: 58px; height: 58px; border-radius: 50%; font-size: 24px;
-  background: var(--accent); border-color: var(--accent); color: #111;
+.transport .star { width: 64px; height: 64px; padding: 0; font-size: 38px; color: var(--star); border-radius: 10px; }
+.jogval {
+  margin-left: auto; min-width: 7.5em; text-align: center; font-size: 26px; font-weight: 600;
+  font-variant-numeric: tabular-nums; color: var(--dim); padding: 8px 14px;
+  border: 1px solid var(--surf3); border-radius: 10px; transition: color .3s, border-color .3s;
 }
-.speed { display: flex; align-items: center; gap: 4px; grid-column: 1; grid-row: 1; justify-self: start; }
+.jogval.on { color: var(--accent); border-color: var(--accent); }
+.jog {
+  position: fixed; z-index: 15; width: calc(var(--jogR) * 2.3); height: calc(var(--jogR) * 2.3);
+  right: calc(var(--jogR) * -1.15); bottom: calc(var(--jogR) * -1.15);
+  pointer-events: none; touch-action: none; user-select: none;
+}
+.jog .hit, .jog .hub { pointer-events: all; }
+.jog .hub { cursor: pointer; }
+.speed { display: flex; align-items: center; gap: 4px; }
 .speed { gap: 0; }
 .speed .arr { border-radius: 8px 0 0 8px; }
 .speed #spUp { border-radius: 0 8px 8px 0; }
@@ -257,7 +267,14 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   .transport .mid { grid-column: 1; gap: 4px; }
   .transport .skip { min-width: 0; flex: 1; padding: 10px 2px; }
   .transport .nav { padding: 8px 4px; }
-  .speed { grid-column: 1; grid-row: auto; justify-self: center; }
+  :root { --jogR: min(130px, 20vh); }
+  .transport { gap: 8px; flex-wrap: nowrap; }
+  .speed button { padding: 10px 6px; font-size: 17px; }
+  .speed .arr { padding: 10px 3px 10px 8px; }
+  .speed #spUp { padding: 10px 8px 10px 3px; }
+  .speed .val { font-size: 17px; }
+  .transport .star { width: 44px; height: 44px; font-size: 26px; flex: none; }
+  .jogval { font-size: 16px; min-width: 0; padding: 8px 8px; white-space: nowrap; }
   .transport .right { grid-column: 1; grid-row: auto; justify-self: center; }
   .transport .right .star { margin: 0; }
   .bigtime { font-size: 24px; }
@@ -267,12 +284,10 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   .footer { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--surf3); }
 }
 @media (max-width: 480px) {     /* вузький телефон: 11 кнопок мають уміститись в один рядок */
-  .transport { padding-left: 6px; padding-right: 6px; }
   .transport .mid { gap: 3px; }
   .transport .skip { font-size: 13px; padding: 10px 0; border-radius: 6px; }
   .transport .nav { padding: 8px 2px; font-size: 15px; }
   .transport .play { width: 46px; height: 46px; font-size: 19px; flex: none; }
-  .transport .star { width: 48px; height: 48px; font-size: 28px; flex: none; }
 }
 </style>
 </head>
@@ -280,7 +295,8 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
 
 <header>
   <svg class="logo" viewBox="-39.83 -39.83 79.66 79.66" fill="currentColor" aria-hidden="true"><path d="M2.00 -4.83 L11.00 -13.83 L11.00 -39.83 L2.00 -30.83 Z M-2.00 -4.83 L-11.00 -13.83 L-11.00 -39.83 L-2.00 -30.83 Z M-4.83 -2.00 L-13.83 -11.00 L-39.83 -11.00 L-30.83 -2.00 Z M-4.83 2.00 L-13.83 11.00 L-39.83 11.00 L-30.83 2.00 Z M-2.00 4.83 L-11.00 13.83 L-11.00 39.83 L-2.00 30.83 Z M2.00 4.83 L11.00 13.83 L11.00 39.83 L2.00 30.83 Z M4.83 2.00 L13.83 11.00 L39.83 11.00 L30.83 2.00 Z M4.83 -2.00 L13.83 -11.00 L39.83 -11.00 L30.83 -2.00 Z M26.00 -33.50 L24.15 -28.55 L18.87 -28.32 L23.00 -25.03 L21.59 -19.93 L26.00 -22.85 L30.41 -19.93 L29.00 -25.03 L33.13 -28.32 L27.85 -28.55 Z"/></svg>
-  <h1>Плеєр ХАРА ОМ</h1>
+  <h1>Плеєр ХАРА ОМ <span class="now" id="nowTitle"></span></h1>
+  <span class="hdur" id="tDur">00:00:00</span>
   <button id="btnInstall" class="accent" title="Встановити як окремий застосунок">Встановити</button>
   <button class="ver" id="ver" title="Скопіювати посилання на плеєр"></button>
 </header>
@@ -331,30 +347,18 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
       </div>
 
   <div class="transport">
-   <div class="mid">
-    <button class="nav" id="btnPrev" title="Попередній файл">⏮</button>
-    <button class="skip" data-skip="-30">−30</button>
-    <button class="skip" data-skip="-10">−10</button>
-    <button class="skip" data-skip="-5">−5</button>
-    <button class="skip" data-skip="-1">−1</button>
-    <button class="play" id="btnPlay" title="Відтворення / пауза (пробіл)">▶</button>
-    <button class="skip" data-skip="1">+1</button>
-    <button class="skip" data-skip="5">+5</button>
-    <button class="skip" data-skip="10">+10</button>
-    <button class="skip" data-skip="30">+30</button>
-    <button class="nav" id="btnNext" title="Наступний файл">⏭</button>
-   </div>
-    <div class="right">
-      <button id="btnMark" class="star" title="Поставити мітку на поточній позиції  ( M )">★</button>
-      <span class="dur" id="tDur">00:00:00</span>
-    </div>
     <div class="speed">
       <button id="spDown" class="arr" title="Повільніше (−0,05)">◀</button>
       <button class="val" id="spVal" title="Обрати швидкість">×1.00</button>
       <button id="spUp" class="arr" title="Швидше (+0,05)">▶</button>
     </div>
+    <button id="btnMark" class="star" title="Поставити мітку на поточній позиції  ( M )">★</button>
+    <div class="jogval" id="jogVal">± 0 сек</div>
   </div>
 </div>
+
+<!-- регулятор прокрутки: центр — у правому нижньому куті, видно чверть -->
+<svg class="jog" id="jog" viewBox="-115 -115 230 230" aria-label="Регулятор прокрутки"></svg>
 
 <div class="speedmenu" id="speedMenu"></div>
 
@@ -884,9 +888,10 @@ function openTrack(i, autoplay) {
   audio.onloadedmetadata = () => {
     audio.playbackRate = speed;
     if (data.pos && data.pos < dur() - 2) audio.currentTime = data.pos;
-    renderBar();
+    renderBar(); updateTime();
     if (autoplay) audio.play().catch(() => {});
   };
+  $('nowTitle').textContent = '· ' + t.file.name;
   document.title = t.file.name + ' — Плеєр ХАРА ОМ';
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({ title: t.file.name });
@@ -948,13 +953,88 @@ function seek(t) {
   updateTime();
 }
 const skip = s => seek(audio.currentTime + s);
-$('btnPlay').onclick = togglePlay;
-document.querySelectorAll('[data-skip]').forEach(b => b.onclick = () => skip(+b.dataset.skip));
-$('btnPrev').onclick = () => { if (audio.currentTime > 3) seek(0); else openTrack(cur - 1, true); };
-$('btnNext').onclick = () => openTrack(cur + 1, true);
+/* ── регулятор прокрутки ──
+   Крутиш за годинниковою стрілкою — вперед, проти — назад: 1° = 1 секунда.
+   Поки крутиш, «± N сек» показує, на скільки перемотано від початку оберту. */
+const JOG_SEC_PER_DEG = 1;
+let jogAngle = 0;
+(function buildJog() {
+  const svg = $('jog'), NS = 'http://www.w3.org/2000/svg';
+  const pt = (r, deg) => [r * Math.cos(deg * Math.PI / 180), r * Math.sin(deg * Math.PI / 180)];
+  let dots = '';
+  for (let i = 0; i < 60; i++) {
+    const a = -135 + i * 6, [x, y] = pt(108, a), d = Math.min(i, 60 - i);
+    dots += `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${d ? 1.1 : 1.6}" fill="#ffd23f" opacity="${Math.max(.18, 1 - d / 12).toFixed(2)}"/>`;
+  }
+  let ribs = '';
+  for (let i = 0; i < 120; i++) {
+    const [x1, y1] = pt(88.5, i * 3), [x2, y2] = pt(96, i * 3);
+    ribs += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${i % 2 ? '#17181b' : '#4a4e55'}" stroke-width="1.2"/>`;
+  }
+  const [m1x, m1y] = pt(70, -135), [m2x, m2y] = pt(84, -135), [dx, dy] = pt(57, -135);
+  svg.innerHTML = `
+  <defs>
+    <radialGradient id="jgBody" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#3b3e44"/><stop offset="1" stop-color="#121315"/></radialGradient>
+    <radialGradient id="jgFace" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#34373c"/><stop offset=".6" stop-color="#1f2124"/><stop offset="1" stop-color="#151618"/></radialGradient>
+    <radialGradient id="jgDimple" cx="60%" cy="65%" r="70%"><stop offset="0" stop-color="#0e0f10"/><stop offset=".75" stop-color="#1b1c1f"/><stop offset="1" stop-color="#3d4046"/></radialGradient>
+    <filter id="jgGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+  </defs>
+  ${dots}
+  <circle r="100" fill="none" stroke="#ffd23f" stroke-width="6" opacity=".8" filter="url(#jgGlow)"/>
+  <circle r="100" fill="none" stroke="#ffd23f" stroke-width="1.5"/>
+  <g id="jogRot">
+    <circle r="97" fill="url(#jgBody)"/>${ribs}
+    <circle r="88" fill="#2a2c30"/><circle r="85" fill="url(#jgFace)"/>
+    <line x1="${m1x}" y1="${m1y}" x2="${m2x}" y2="${m2y}" stroke="#ffd23f" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="${dx}" cy="${dy}" r="14" fill="url(#jgDimple)" stroke="#4a4e55" stroke-width=".6"/>
+  </g>
+  <circle class="hit" r="100" fill="transparent"/>
+  <g class="hub" id="btnPlay">
+    <circle r="38" fill="#151618" stroke="#ffd23f" stroke-width="1.2"/>
+    <g id="playIco" transform="translate(-21 -21)" fill="none" stroke="#ffd23f" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></g>
+  </g>`;
+})();
+function setPlayIcon(playing) {
+  $('playIco').innerHTML = playing
+    ? '<line x1="-3.5" y1="-7" x2="-3.5" y2="7"/><line x1="3.5" y1="-7" x2="3.5" y2="7"/>'
+    : '<polygon points="-5,-8 8,0 -5,8"/>';
+}
+setPlayIcon(false);
+$('btnPlay').addEventListener('click', togglePlay);
+(function jogDrag() {
+  const svg = $('jog'), val = $('jogVal');
+  let last = null, acc = 0, base = 0, hideT, raf = 0;
+  const ang = e => { const r = svg.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
+  const show = () => {
+    const n = Math.round(acc * JOG_SEC_PER_DEG);
+    val.textContent = (n < 0 ? '− ' : '+ ') + Math.abs(n) + ' сек';
+    val.classList.add('on');
+  };
+  svg.addEventListener('pointerdown', e => {
+    if (e.target.closest('.hub') || !e.target.closest('.hit')) return;
+    if (!hasTrack()) return toast('Спочатку відкрийте файл');
+    e.preventDefault(); svg.setPointerCapture(e.pointerId);
+    last = ang(e); acc = 0; base = audio.currentTime; clipStopAt = null; clearTimeout(hideT); show();
+  });
+  svg.addEventListener('pointermove', e => {
+    if (last === null) return;
+    const a = ang(e); let d = a - last; last = a;
+    if (d > 180) d -= 360; else if (d < -180) d += 360;
+    acc += d; jogAngle += d;
+    $('jogRot').setAttribute('transform', `rotate(${jogAngle.toFixed(1)})`);
+    show();
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; seek(base + acc * JOG_SEC_PER_DEG); });
+  });
+  const end = () => {
+    if (last === null) return;
+    last = null;
+    hideT = setTimeout(() => { val.classList.remove('on'); val.textContent = '± 0 сек'; }, 1500);
+  };
+  svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+})();
 
-audio.onplay = () => { $('btnPlay').textContent = '❚❚'; };
-audio.onpause = () => { $('btnPlay').textContent = '▶'; if (data) { data.pos = audio.currentTime; save(); } };
+audio.onplay = () => setPlayIcon(true);
+audio.onpause = () => { setPlayIcon(false); if (data) { data.pos = audio.currentTime; save(); } };
 audio.onended = () => { if (data) { data.pos = 0; save(); } if (cur < tracks.length - 1) openTrack(cur + 1, true); };
 audio.ontimeupdate = () => {
   if (clipStopAt != null && audio.currentTime >= clipStopAt) { audio.pause(); clipStopAt = null; }
@@ -1425,7 +1505,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v34';
+const APP_VER = 'v35';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
