@@ -26,7 +26,7 @@ p { color: var(--dim); text-align: center; max-width: 520px; line-height: 1.4; }
 .apps a { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border-radius: 12px; text-decoration: none;
   background: var(--surface); border: 1px solid var(--accent); color: var(--accent); font-size: 22px; font-weight: 700; }
 .apps a small { display: block; color: var(--dim); font-size: 14px; font-weight: 400; margin-top: 4px; }
-.apps a .ic { font-size: 30px; width: 40px; text-align: center; }
+.apps a .ic { width: 64px; height: 64px; border-radius: 14px; flex: none; }
 #ver { position: fixed; top: 10px; right: 14px; color: var(--dim); font-size: 13px; }
 </style>
 </head>
@@ -34,14 +34,14 @@ p { color: var(--dim); text-align: center; max-width: 520px; line-height: 1.4; }
 <h1><svg class="logo" viewBox="-39.83 -39.83 79.66 79.66" fill="currentColor" aria-hidden="true"><path d="M2.00 -4.83 L11.00 -13.83 L11.00 -39.83 L2.00 -30.83 Z M-2.00 -4.83 L-11.00 -13.83 L-11.00 -39.83 L-2.00 -30.83 Z M-4.83 -2.00 L-13.83 -11.00 L-39.83 -11.00 L-30.83 -2.00 Z M-4.83 2.00 L-13.83 11.00 L-39.83 11.00 L-30.83 2.00 Z M-2.00 4.83 L-11.00 13.83 L-11.00 39.83 L-2.00 30.83 Z M2.00 4.83 L11.00 13.83 L11.00 39.83 L2.00 30.83 Z M4.83 2.00 L13.83 11.00 L39.83 11.00 L30.83 2.00 Z M4.83 -2.00 L13.83 -11.00 L39.83 -11.00 L30.83 -2.00 Z M26.00 -33.50 L24.15 -28.55 L18.87 -28.32 L23.00 -25.03 L21.59 -19.93 L26.00 -22.85 L30.41 -19.93 L29.00 -25.03 L33.13 -28.32 L27.85 -28.55 Z"/></svg>Плеєри ХАРА ОМ</h1>
 <p>Плеєр розділено на три окремі застосунки. Відкрийте потрібний і встановіть його (меню Chrome ⋮ → «Встановити застосунок»).</p>
 <div class="apps">
-  <a href="../audio-player/"><span class="ic">♫</span><span>Аудіоплеєр<small>мітки, фрагменти у MP3</small></span></a>
-  <a href="../video-player/"><span class="ic">▶</span><span>Відеоплеєр<small>мітки, покадрова прокрутка, «Останні»</small></span></a>
-  <a href="../video-editor/"><span class="ic">✂</span><span>Відеоредактор<small>обрізка, фрагменти у відео та MP3</small></span></a>
+  <a href="../audio-player/"><img class="ic" src="apps/audio-player.png" alt=""><span>Аудіоплеєр<small>мітки, фрагменти у MP3</small></span></a>
+  <a href="../video-player/"><img class="ic" src="apps/video-player.png" alt=""><span>Відеоплеєр<small>мітки, покадрова прокрутка, «Останні»</small></span></a>
+  <a href="../video-editor/"><img class="ic" src="apps/video-editor.png" alt=""><span>Відеоредактор<small>обрізка, фрагменти у відео та MP3</small></span></a>
 </div>
 <div id="ver"></div>
 <script>
 // Сторінка-меню на старій адресі /player/. APP_VER — щоб старий встановлений плеєр сам оновився сюди.
-const APP_VER = 'v59';
+const APP_VER = 'v60';
 document.getElementById('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>

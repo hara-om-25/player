@@ -64,6 +64,8 @@ def build(app, out):
     # іконки: логотип, довкола зірки — смуги / око / кадр плівки
     subprocess.run([sys.executable, os.path.join(ROOT, 'logo.py'), 'png', out, app['glyph']], check=True)
     shutil.copytree(os.path.join(ROOT, 'fonts'), os.path.join(out, 'fonts'), dirs_exist_ok=True)
+    os.makedirs(os.path.join(ROOT, 'apps'), exist_ok=True)       # іконка — і для сторінки-меню /player/
+    shutil.copy(os.path.join(out, 'icon-192.png'), os.path.join(ROOT, 'apps', app['id'] + '.png'))
     print(f"{app['id']:14} {ver} → {out}")
 
 
