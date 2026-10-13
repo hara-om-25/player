@@ -743,9 +743,9 @@ function fmt(s, ms) {
 }
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 let toastTimer;
-function toast(msg) {
+function toast(msg, ms = 2200) {
   const el = $('toast'); el.innerHTML = ''; el.appendChild(document.createElement('span')).textContent = msg; el.classList.add('on');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), 2200);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), ms);
 }
 // Вікно назви стоїть посередині видимої частини екрана — над клавіатурою, коли вона відкрита
 function placeDlg() {
@@ -1425,7 +1425,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v33';
+const APP_VER = 'v34';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
@@ -1438,7 +1438,7 @@ async function copyText(t) {
   } catch { return false; }
 }
 $('ver').onclick = async () => {
-  toast(await copyText(APP_URL) ? 'Посилання скопійовано: ' + APP_URL : APP_URL);
+  toast(await copyText(APP_URL) ? 'Посилання скопійовано: ' + APP_URL : APP_URL, 700);
 };
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
