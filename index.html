@@ -1425,7 +1425,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v29';
+const APP_VER = 'v30';
 // Стала висота: перераховується лише при повороті екрана (змінилась ширина).
 // Невеликі зміни висоти (плашка) беремо тільки в бік зменшення, великі (клавіатура) — ігноруємо.
 (() => {
@@ -1438,6 +1438,19 @@ const APP_VER = 'v29';
     document.documentElement.style.setProperty('--appH', h + 'px');
   };
   fit(); addEventListener('resize', fit);
+  // на весь екран висота законно змінюється — перерахувати з нуля
+  document.addEventListener('fullscreenchange', () => setTimeout(() => { w = 0; fit(); }, 150));
+})();
+// Планшет: системна плашка там сама то ховається, то з'являється — тож плеєр одразу
+// відкривається на весь екран (після першого дотику; браузер інакше не дозволяє).
+// Телефон не чіпаємо. Вийшли з повноекранного (згорнули, вибір файлу) — наступний дотик поверне.
+(() => {
+  const tablet = Math.min(screen.width, screen.height) >= 600 && matchMedia('(pointer: coarse)').matches;
+  if (!tablet || !document.documentElement.requestFullscreen) return;
+  document.addEventListener('pointerdown', () => {
+    if (document.fullscreenElement || $('dlg').open) return;
+    document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+  }, true);
 })();
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну і в системне меню «Поділитися»,
