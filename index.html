@@ -58,14 +58,18 @@ input[type=text] {
 input[type=text]:focus { outline: 2px solid var(--accent); border-color: transparent; }
 
 /* ── header ───────────────────────────── */
-header {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--surf3);
+header {   /* ті самі три колонки, що й у панелей, — щоб вирівнювати по їхніх краях */
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 10px;
+  padding: 10px; background: var(--surface); border-bottom: 1px solid var(--surf3);
 }
 header .logo { width: 26px; height: 26px; color: var(--accent); flex: none; }
-header h1 { font-size: 17px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-header .now { color: var(--dim); font-weight: 400; }
-header .hdur { font-size: 20px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
+header h1 { font-size: 17px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hc1, .hc2, .hc3 { display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* назва файлу й тривалість — над панеллю «Мітки», по її правому краю */
+.hc2 { justify-content: flex-end; gap: 14px; }
+.hc3 { justify-content: flex-end; }
+header .now { color: var(--dim); font-weight: 400; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+header .hdur { flex: none; font-size: 20px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
 header button { padding: 6px 9px; font-size: 13px; }
 header .ver { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; background: none; border: 1px solid transparent; padding: 6px 8px; }
 header .ver:hover { border-color: var(--surf3); color: var(--text); }
@@ -268,6 +272,9 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   .transport .skip { min-width: 0; flex: 1; padding: 10px 2px; }
   .transport .nav { padding: 8px 4px; }
   :root { --jogR: min(130px, 20vh); }
+  header { display: flex; }
+  .hc1 { flex: 1; }
+  header .now { display: none; }
   .transport { gap: 8px; flex-wrap: nowrap; }
   .speed button { padding: 10px 6px; font-size: 17px; }
   .speed .arr { padding: 10px 3px 10px 8px; }
@@ -294,11 +301,15 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
 <body>
 
 <header>
+  <div class="hc1">
   <svg class="logo" viewBox="-39.83 -39.83 79.66 79.66" fill="currentColor" aria-hidden="true"><path d="M2.00 -4.83 L11.00 -13.83 L11.00 -39.83 L2.00 -30.83 Z M-2.00 -4.83 L-11.00 -13.83 L-11.00 -39.83 L-2.00 -30.83 Z M-4.83 -2.00 L-13.83 -11.00 L-39.83 -11.00 L-30.83 -2.00 Z M-4.83 2.00 L-13.83 11.00 L-39.83 11.00 L-30.83 2.00 Z M-2.00 4.83 L-11.00 13.83 L-11.00 39.83 L-2.00 30.83 Z M2.00 4.83 L11.00 13.83 L11.00 39.83 L2.00 30.83 Z M4.83 2.00 L13.83 11.00 L39.83 11.00 L30.83 2.00 Z M4.83 -2.00 L13.83 -11.00 L39.83 -11.00 L30.83 -2.00 Z M26.00 -33.50 L24.15 -28.55 L18.87 -28.32 L23.00 -25.03 L21.59 -19.93 L26.00 -22.85 L30.41 -19.93 L29.00 -25.03 L33.13 -28.32 L27.85 -28.55 Z"/></svg>
-  <h1>Плеєр ХАРА ОМ <span class="now" id="nowTitle"></span></h1>
-  <span class="hdur" id="tDur">00:00:00</span>
+  <h1>Плеєр ХАРА ОМ</h1>
+  </div>
+  <div class="hc2"><span class="now" id="nowTitle"></span><span class="hdur" id="tDur">00:00:00</span></div>
+  <div class="hc3">
   <button id="btnInstall" class="accent" title="Встановити як окремий застосунок">Встановити</button>
   <button class="ver" id="ver" title="Скопіювати посилання на плеєр"></button>
+  </div>
 </header>
 
 <main>
@@ -891,7 +902,7 @@ function openTrack(i, autoplay) {
     renderBar(); updateTime();
     if (autoplay) audio.play().catch(() => {});
   };
-  $('nowTitle').textContent = '· ' + t.file.name;
+  $('nowTitle').textContent = t.file.name;
   document.title = t.file.name + ' — Плеєр ХАРА ОМ';
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({ title: t.file.name });
@@ -1505,7 +1516,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v36';
+const APP_VER = 'v37';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
