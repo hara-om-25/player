@@ -153,6 +153,20 @@ main {
 /* відтворення назад: кадри малюються сюди поверх відео */
 #revCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: none; background: var(--surface); }
 #revCanvas.on { display: block; }
+/* режим «на весь екран» (body.fs): лишаються відео, [ час ], РП, вихід, ★ і швидкість */
+.fsbtn { position: absolute; right: 14px; bottom: 14px; z-index: 2; width: 52px; height: 52px; padding: 10px; display: none;
+  background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.18); color: var(--accent); border-radius: 10px; }
+.fsbtn svg { width: 100%; height: 100%; display: block; }
+.vidbox.on ~ .fsbtn { display: block; }
+body.fs .vidbox ~ .fsbtn { display: none; }
+.fsexit { position: fixed; display: none; z-index: 16; right: calc(var(--jogR) * 1.15 + 12px); bottom: calc(12px + env(safe-area-inset-bottom)); }
+body.fs .fsexit { display: block; }
+body.fs .panel.stage { position: fixed; inset: 0; z-index: 12; border: 0; border-radius: 0; max-height: none; background: #000; }
+body.fs .vidbox { flex: 1; aspect-ratio: auto; max-height: none; background: #000; }
+body.fs .markctl.ovl { bottom: calc(14px + env(safe-area-inset-bottom)); }
+body.fs .spdrow { position: fixed; z-index: 16; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); padding: 0; border: 0; background: none; }
+body.fs .spdrow .speed button { background: rgba(0,0,0,.55); }
+body.fs #btnMark { position: fixed; z-index: 16; right: 12px; bottom: calc(var(--jogR) * 1.15 + 12px); margin: 0; }
 /* сторінка не масштабується пальцями; масштабується лише відео (жести на #vidbox) */
 html, body { touch-action: pan-x pan-y; }
 .vidbox.on { touch-action: none; }
@@ -354,6 +368,9 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   .markctl .sq, .savectl .sq { width: 48px; height: 48px; }
   .markctl .grp { gap: 8px; }
   .pfoot .sq { width: 48px; height: 48px; }
+  .fsbtn { top: 10px; bottom: auto; right: 10px; width: 44px; height: 44px; padding: 8px; }
+  .fsexit { top: auto; right: calc(var(--jogR) * 1.15 + 10px); bottom: calc(12px + env(safe-area-inset-bottom)); }
+  body.fs .markctl.ovl { bottom: calc(var(--jogR) * 1.15 + 24px + env(safe-area-inset-bottom)); }
   .footer { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--surf3); }
 }
 @media (max-width: 480px) {     /* вузький телефон: 11 кнопок мають уміститись в один рядок */
@@ -407,6 +424,7 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
       <svg class="stagelogo" viewBox="-39.83 -39.83 79.66 79.66" fill="currentColor" aria-hidden="true"><path d="M2.00 -4.83 L11.00 -13.83 L11.00 -39.83 L2.00 -30.83 Z M-2.00 -4.83 L-11.00 -13.83 L-11.00 -39.83 L-2.00 -30.83 Z M-4.83 -2.00 L-13.83 -11.00 L-39.83 -11.00 L-30.83 -2.00 Z M-4.83 2.00 L-13.83 11.00 L-39.83 11.00 L-30.83 2.00 Z M-2.00 4.83 L-11.00 13.83 L-11.00 39.83 L-2.00 30.83 Z M2.00 4.83 L11.00 13.83 L11.00 39.83 L2.00 30.83 Z M4.83 2.00 L13.83 11.00 L39.83 11.00 L30.83 2.00 Z M4.83 -2.00 L13.83 -11.00 L39.83 -11.00 L30.83 -2.00 Z M26.00 -33.50 L24.15 -28.55 L18.87 -28.32 L23.00 -25.03 L21.59 -19.93 L26.00 -22.85 L30.41 -19.93 L29.00 -25.03 L33.13 -28.32 L27.85 -28.55 Z"/></svg>
       <video id="audio" preload="metadata" playsinline></video><canvas id="revCanvas"></canvas><video id="revVideo" muted playsinline preload="auto"></video>
     </div>
+    <button id="btnFs" class="fsbtn" title="На весь екран  ( F )"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/></svg></button>
     <div class="markctl ovl">
       <div class="grp">
         <button id="btnStart" class="sq br" title="Початок фрагмента = поточна позиція  ( [ )">[<span id="lblStart" hidden></span></button>
@@ -458,6 +476,7 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
 </div>
 
 <!-- регулятор прокрутки: центр — у правому нижньому куті, видно чверть -->
+<button id="btnFsExit" class="fsbtn fsexit" title="Вийти з повного екрана  ( Esc )"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v6H3M21 9h-6V3M15 21v-6h6M3 15h6v6"/></svg></button>
 <svg class="jog" id="jog" viewBox="-115 -115 230 230" aria-label="Регулятор прокрутки"></svg>
 
 <div class="speedmenu" id="speedMenu"></div>
@@ -1041,7 +1060,6 @@ function fitVideo() {
   audio.style.objectFit = fitMode; $('revCanvas').style.objectFit = fitMode;
 }
 addEventListener('resize', fitVideo);
-document.addEventListener('fullscreenchange', () => setTimeout(fitVideo, 50));
 document.fonts && document.fonts.ready.then(layoutActions);
 setTimeout(layoutActions, 300);
 document.querySelectorAll('[data-last]').forEach(b => b.onclick = () => {
@@ -1529,12 +1547,6 @@ $('btnSaveVid').onclick = async () => { const c = await newClip('Зберегт�
     s = ns; tx = px - cx * s; ty = py - cy * s;
   };
   const pinch = () => { const [a, b] = [...pts.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), m: rel((a.x + b.x) / 2, (a.y + b.y) / 2) }; };
-  const fullscreen = () => {
-    if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-    else if (box.requestFullscreen) box.requestFullscreen().catch(() => {});
-    else if (box.webkitRequestFullscreen) box.webkitRequestFullscreen();
-    else if (audio.webkitEnterFullscreen) audio.webkitEnterFullscreen();
-  };
   box.addEventListener('pointerdown', e => {
     if (!box.classList.contains('on')) return;
     box.setPointerCapture(e.pointerId);
@@ -1563,7 +1575,7 @@ $('btnSaveVid').onclick = async () => { const c = await newClip('Зберегт�
     if (pts.size === 1) moved = true;
     if (pts.size === 0 && !moved) {            // дотик без руху — можливо, подвійний
       const now = performance.now();
-      if (now - lastTap < 350) { lastTap = 0; fullscreen(); } else lastTap = now;
+      if (now - lastTap < 350) { lastTap = 0; setFs(!document.body.classList.contains('fs')); } else lastTap = now;
     }
   };
   box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
@@ -1576,9 +1588,22 @@ $('btnSaveVid').onclick = async () => { const c = await newClip('Зберегт�
   // сторінка не масштабується: ctrl+коліщатко / жест трекпада поза відео, жести Safari
   addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
   for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, e => e.preventDefault());
-  document.addEventListener('fullscreenchange', () => { s = 1; tx = ty = 0; apply(); });
   window.zoomReset = () => { s = 1; tx = ty = 0; apply(); };
 })();
+// «На весь екран»: уся сторінка — у повноекранний режим браузера (ховаються панелі Android),
+// а body.fs лишає видимими тільки відео, [ час ], РП, вихід, ★ і швидкість.
+function setFs(on) {
+  const d = document, el = d.documentElement, inFs = d.fullscreenElement || d.webkitFullscreenElement;
+  d.body.classList.toggle('fs', on);
+  if (on && !inFs) { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); r && r.catch && r.catch(() => {}); } }
+  if (!on && inFs) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+  zoomReset();
+  requestAnimationFrame(() => { fitVideo(); zoomReset(); layoutActions(); });
+}
+$('btnFs').onclick = () => setFs(true);
+$('btnFsExit').onclick = () => setFs(false);
+for (const ev of ['fullscreenchange', 'webkitfullscreenchange'])
+  document.addEventListener(ev, () => { if (!(document.fullscreenElement || document.webkitFullscreenElement) && document.body.classList.contains('fs')) setFs(false); else requestAnimationFrame(() => { fitVideo(); zoomReset(); }); });
 
 function renderClips() {
   const el = $('clipList');
@@ -1967,6 +1992,8 @@ document.addEventListener('keydown', e => {
   else if (k === ']' || k === 'ї' || k === 'Ї') $('btnEnd').click();
   else if (k === '-') step(-1);
   else if (k === '=' || k === '+') step(1);
+  else if (k === 'f' || k === 'F' || k === 'а' || k === 'А') setFs(!document.body.classList.contains('fs'));
+  else if (k === 'Escape' && document.body.classList.contains('fs')) setFs(false);
 });
 if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
@@ -1988,7 +2015,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v52';
+const APP_VER = 'v53';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
