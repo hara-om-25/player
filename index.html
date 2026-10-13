@@ -995,7 +995,7 @@ let jogAngle = 0;
     const [x1, y1] = pt(88.5, i * 3), [x2, y2] = pt(96, i * 3);
     ribs += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${i % 2 ? '#17181b' : '#4a4e55'}" stroke-width="1.2"/>`;
   }
-  const [m1x, m1y] = pt(70, -135), [m2x, m2y] = pt(84, -135), [dx, dy] = pt(57, -135);
+  const [m1x, m1y] = pt(102, -135), [m2x, m2y] = pt(113, -135), [dx, dy] = pt(72, -135);
   svg.innerHTML = `
   <defs>
     <radialGradient id="jgBody" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#3b3e44"/><stop offset="1" stop-color="#121315"/></radialGradient>
@@ -1010,11 +1010,11 @@ let jogAngle = 0;
     <circle r="97" fill="url(#jgBody)"/>${ribs}
     <circle r="88" fill="#2a2c30"/><circle r="85" fill="url(#jgFace)"/>
     <line x1="${m1x}" y1="${m1y}" x2="${m2x}" y2="${m2y}" stroke="#ffd23f" stroke-width="2.6" stroke-linecap="round"/>
-    <circle cx="${dx}" cy="${dy}" r="14" fill="url(#jgDimple)" stroke="#4a4e55" stroke-width=".6"/>
+    <circle cx="${dx}" cy="${dy}" r="11.5" fill="url(#jgDimple)" stroke="#4a4e55" stroke-width=".6"/>
   </g>
   <circle class="hit" r="100" fill="transparent"/>
   <g class="hub" id="btnPlay">
-    <circle r="38" fill="#151618" stroke="#ffd23f" stroke-width="1.2"/>
+    <circle r="50" fill="#151618" stroke="#ffd23f" stroke-width="1.2"/>
     <g id="playIco" transform="translate(-21 -21)" fill="none" stroke="#ffd23f" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></g>
   </g>`;
 })();
@@ -1587,7 +1587,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v39';
+const APP_VER = 'v40';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
