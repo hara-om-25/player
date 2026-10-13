@@ -1,8 +1,8 @@
 {
  "id": "./",
- "name": "Плеєр з мітками",
- "short_name": "Плеєр",
- "description": "Аудіоплеєр з мітками та збереженням фрагментів у MP3",
+ "name": "__NAME__",
+ "short_name": "__SHORT__",
+ "description": "__DESC__",
  "start_url": "./",
  "scope": "./",
  "display": "standalone",
@@ -28,16 +28,7 @@
   {
    "action": "./",
    "accept": {
-    "audio/*": [
-     ".mp3",
-     ".m4a",
-     ".aac",
-     ".ogg",
-     ".opus",
-     ".wav",
-     ".flac",
-     ".amr"
-    ]
+    "__MIME__": "__EXTS__"
    }
   }
  ],
