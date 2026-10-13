@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Плеєр ХАРА ОМ</title>
 <meta name="theme-color" content="#151618">
 <meta name="mobile-web-app-capable" content="yes">
@@ -34,7 +34,10 @@
   --danger:  #c0392b;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
+/* Висота плеєра на планшеті/ПК — стала (--appH, рахує JS): коли ховається/з'являється
+   системна плашка чи клавіатура, екран змінює висоту, і без цього все смикалось */
+html { height: 100%; overflow: hidden; }
+body { height: var(--appH, 100%); overflow: hidden; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -245,7 +248,8 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
 
 /* ── mobile ───────────────────────────── */
 @media (max-width: 860px) {
-  body { height: auto; min-height: 100%; }
+  html { overflow: auto; }
+  body { height: auto; min-height: 100%; overflow: visible; }
   main { grid-template-columns: 1fr; }
   .panel { max-height: 42vh; }
   .panel.playlist { max-height: 30vh; }
@@ -1421,7 +1425,20 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v27';
+const APP_VER = 'v28';
+// Стала висота: перераховується лише при повороті екрана (змінилась ширина).
+// Невеликі зміни висоти (плашка) беремо тільки в бік зменшення, великі (клавіатура) — ігноруємо.
+(() => {
+  let w = 0, h = 0;
+  const fit = () => {
+    const W = innerWidth, H = innerHeight;
+    if (W !== w) { w = W; h = H; }
+    else if (H < h && h - H < 120) h = H;
+    else return;
+    document.documentElement.style.setProperty('--appH', h + 'px');
+  };
+  fit(); addEventListener('resize', fit);
+})();
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну і в системне меню «Поділитися»,
 // щоб переслати його; хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
