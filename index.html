@@ -1015,16 +1015,38 @@ let jogAngle = 0;
   <circle class="hit" r="100" fill="transparent"/>
   <g class="hub" id="btnPlay">
     <circle r="50" fill="#151618" stroke="#ffd23f" stroke-width="1.2"/>
-    <g id="playIco" transform="translate(-21 -21)" fill="none" stroke="#ffd23f" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></g>
+    <g id="playIco" fill="none" stroke="#ffd23f" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></g>
   </g>`;
 })();
 function setPlayIcon(playing) {
   $('playIco').innerHTML = playing
-    ? '<line x1="-3.5" y1="-7" x2="-3.5" y2="7"/><line x1="3.5" y1="-7" x2="3.5" y2="7"/>'
-    : '<polygon points="-5,-8 8,0 -5,8"/>';
+    ? '<line x1="-22" y1="-29" x2="-22" y2="-5"/><line x1="-11" y1="-29" x2="-11" y2="-5"/>'
+    : '<polygon points="-27,-29 -4,-16.5 -27,-4"/>';
 }
 setPlayIcon(false);
 $('btnPlay').addEventListener('click', togglePlay);
+// Тихе механічне клацання — на кожну поділку (3° = 1 с)
+const jogClick = (() => {
+  let ctx = null, buf = null;
+  return () => {
+    try {
+      if (!ctx) {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const n = Math.floor(ctx.sampleRate * 0.012);
+        buf = ctx.createBuffer(1, n, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 6);
+      }
+      if (ctx.state === 'suspended') ctx.resume();
+      const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      src.buffer = buf; bp.type = 'bandpass'; bp.frequency.value = 2600 + Math.random() * 400; bp.Q.value = 3;
+      g.gain.value = 0.35;
+      src.connect(bp).connect(g).connect(ctx.destination); src.start();
+    } catch {}
+  };
+})();
+// Межі оберту: ямка під палець (і мітка) не виходять за краї екрана — краї як упори
+const JOG_LIM = 45 - Math.asin(14 / 72) * 180 / Math.PI;
 (function jogDrag() {
   const svg = $('jog'), val = $('jogVal');
   let last = null, acc = 0, base = 0, hideT, raf = 0;
@@ -1044,7 +1066,12 @@ $('btnPlay').addEventListener('click', togglePlay);
     if (last === null) return;
     const a = ang(e); let d = a - last; last = a;
     if (d > 180) d -= 360; else if (d < -180) d += 360;
-    acc += d; jogAngle += d;
+    const na = Math.max(-JOG_LIM, Math.min(JOG_LIM, jogAngle + d));
+    d = na - jogAngle;
+    if (!d) return;
+    const ticks = Math.abs(Math.floor(na / 3) - Math.floor(jogAngle / 3));
+    for (let k = 0; k < Math.min(ticks, 3); k++) setTimeout(jogClick, k * 15);
+    acc += d; jogAngle = na;
     const g = $('jogRot'); g.style.transition = 'none'; g.style.transform = `rotate(${jogAngle.toFixed(1)}deg)`;
     show();
     if (!raf) raf = requestAnimationFrame(() => { raf = 0; seek(base + acc * JOG_SEC_PER_DEG); });
@@ -1587,7 +1614,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v40';
+const APP_VER = 'v41';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
