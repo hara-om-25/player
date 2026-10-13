@@ -40,7 +40,7 @@ else:
         lw = max(2, int(1.3*u))
         if kind == 'audio':        # звукові смуги: над зіркою, обабіч неї й під нею
             bar = lambda x1, x2, dy: dr.rounded_rectangle([X0 + x1*u, Y0 + dy*u - 0.95*u, X0 + x2*u, Y0 + dy*u + 0.95*u], radius=0.95*u, fill=Y)
-            bar(-7, 7, -9.6); bar(-11.5, -7.2, 0.4); bar(7.2, 11.5, 0.4); bar(-7, 7, 8.9)
+            bar(-7, 7, -8.6); bar(-11.5, 11.5, 0.4); bar(-7, 7, 9.4)
         elif kind == 'video':      # око, зірка — зіниця
             w, h = 12.0, 7.5          # мигдалеве око: дві дуги y = ±h(1 − (x/w)²), що сходяться в кутиках
             xs_ = [w*(i/40*2 - 1) for i in range(41)]
@@ -57,5 +57,5 @@ else:
                     dr.rectangle([x - 0.6*u, y - 0.7*u, x + 0.6*u, y + 0.7*u], fill=Y)
         rs = 1.0 if not kind else 0.8          # зірка (в оці й кадрі трохи менша)
         star_px = [P(scx + (x - scx)*rs, scy + (y - scy)*rs) for x, y in [(a - mx, b - my) for a, b in star]]
-        dr.polygon(star_px, fill=Y)
+        if not kind: dr.polygon(star_px, fill=Y)      # в іконках застосунків зірки немає
         im.resize((n, n), Image.LANCZOS).save(f'{out}/icon-{n}.png')
