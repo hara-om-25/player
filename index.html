@@ -1045,22 +1045,41 @@ const jogClick = (() => {
     } catch {}
   };
 })();
+// Тривалість кадру відео: міряємо під час відтворення (requestVideoFrameCallback),
+// поки не відомо — 1/30 с (типове відео з телефона)
+let frameDur = 1 / 30, frameMeasured = false;
+(() => {
+  const v = audio;
+  if (!('requestVideoFrameCallback' in v)) return;
+  let lastT = null;
+  const cb = (now, md) => {
+    if (lastT !== null) {
+      const d = md.mediaTime - lastT;
+      if (d > 0.004 && d < 0.2 && (!frameMeasured || d < frameDur - 0.0005)) { frameDur = d; frameMeasured = true; }
+    }
+    lastT = md.mediaTime;
+    v.requestVideoFrameCallback(cb);
+  };
+  v.addEventListener('loadedmetadata', () => { frameDur = 1 / 30; frameMeasured = false; lastT = null; });
+  v.addEventListener('seeking', () => { lastT = null; });
+  v.requestVideoFrameCallback(cb);
+})();
 // Межі оберту: ямка під палець (і мітка) не виходять за краї екрана — краї як упори
 const JOG_LIM = 45 - Math.asin(14 / 72) * 180 / Math.PI;
 (function jogDrag() {
   /* Два режими:
-     • пауза — покрокова перемотка: поділка (3°) = 1 с;
+     • пауза — покрокова перемотка: поділка (3°) = 1 с, а для відео — 1 кадр;
      • відтворення — човник (shuttle): кут = швидкість і напрямок.
        Біля нуля (±4°) — звичайна швидкість, вправо — швидше вперед до ×4,
        вліво — відтворення назад до ×4 (кадри назад; звук на цей час вимикається —
        браузер не вміє грати звук задом наперед). Відпустив — звичайне відтворення. */
   const svg = $('jog'), val = $('jogVal'), DEAD = 4, MAXR = 4;
-  let last = null, acc = 0, base = 0, hideT, raf = 0, mode = 'scrub', revT = null, rate = 0;
+  let last = null, acc = 0, base = 0, hideT, raf = 0, mode = 'scrub', revT = null, rate = 0, frames = false;
   const ang = e => { const r = svg.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
   const show = () => {
     if (mode === 'scrub') {
       const n = Math.round(acc * JOG_SEC_PER_DEG);
-      val.textContent = (n < 0 ? '− ' : '+ ') + Math.abs(n) + ' сек';
+      val.textContent = (n < 0 ? '− ' : '+ ') + Math.abs(n) + (frames ? ' кадр.' : ' сек');
     } else {
       val.textContent = rate === 0 ? '▶ ×' + speed.toFixed(2) : (rate > 0 ? '▶▶ ×' : '◀◀ ×') + Math.abs(rate).toFixed(1);
     }
@@ -1086,6 +1105,7 @@ const JOG_LIM = 45 - Math.asin(14 / 72) * 180 / Math.PI;
     if (!hasTrack()) return toast('Спочатку відкрийте файл');
     e.preventDefault(); svg.setPointerCapture(e.pointerId);
     mode = audio.paused ? 'scrub' : 'shuttle';
+    frames = mode === 'scrub' && !!audio.videoWidth;     // відео на паузі — покадрово
     last = ang(e); acc = 0; rate = 0; base = audio.currentTime; clipStopAt = null; clearTimeout(hideT); show();
   });
   svg.addEventListener('pointermove', e => {
@@ -1100,7 +1120,14 @@ const JOG_LIM = 45 - Math.asin(14 / 72) * 180 / Math.PI;
     acc += d; jogAngle = na;
     const g = $('jogRot'); g.style.transition = 'none'; g.style.transform = `rotate(${jogAngle.toFixed(1)}deg)`;
     if (mode === 'scrub') {
-      if (!raf) raf = requestAnimationFrame(() => { raf = 0; seek(base + acc * JOG_SEC_PER_DEG); });
+      if (!raf) raf = requestAnimationFrame(() => {
+        raf = 0;
+        const n = Math.round(acc * JOG_SEC_PER_DEG);
+        if (!frames) return seek(base + acc * JOG_SEC_PER_DEG);
+        // поділка = кадр; цілимось у середину кадру, щоб браузер точно показав саме його
+        const f0 = Math.floor(base / frameDur + 1e-6);
+        seek((f0 + n) * frameDur + frameDur / 2);
+      });
     } else {
       rate = shuttleRate(jogAngle); applyShuttle();
     }
@@ -1645,7 +1672,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v42';
+const APP_VER = 'v43';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
