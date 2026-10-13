@@ -22,7 +22,7 @@
   src: url(fonts/tektur-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 /* колонки: вузький плейлист | широка середина з відео | мітки й фрагменти */
 :root {
-  --cols: minmax(170px, 1fr) minmax(0, 3.2fr) minmax(280px, 1.5fr);
+  --cols: minmax(210px, 1fr) minmax(0, 3.2fr) minmax(280px, 1.5fr);
   --bg:      #1a1b1d;   /* основний фон — темно-сірий */
   --surface: #151618;
   --surf2:   #1d1f21;
@@ -112,7 +112,29 @@ main {
 .vidbox.on > #audio { visibility: visible; position: static; }
 .stagelogo { width: 28%; max-width: 180px; color: var(--surf3); }
 .vidbox.on .stagelogo { display: none; }
-.panel.side .sec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.panel.side .sec, .panel.playlist .sec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.panel.playlist .sec { border-top: 1px solid var(--surf3); }
+.panel.playlist > .list { flex: 1 1 35%; min-height: 60px; }
+.panel.playlist .fragsec { flex: 1 1 65%; min-height: 150px; }
+.fragsec h2 { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; padding-left: 10px; padding-right: 8px; min-width: 0; }
+.fragsec h2 > span { text-align: left; white-space: normal; }
+.fragsec h2 .hsq { width: 40px; height: 40px; }
+.fragsec h2 .hsq.vid { width: 54px; margin-right: 6px; }
+/* у вузькій колонці кнопки фрагмента — окремим рядком під назвою */
+.fragsec .item { flex-wrap: wrap; row-gap: 2px; }
+.fragsec .item .col { flex: 1 1 calc(100% - 2.5em); }
+.fragsec .item .acts { width: 100%; justify-content: space-between; padding-left: 1.4em; gap: 0; }
+.fragsec .item .acts button { padding: 5px 4px; font-size: 19px; }
+.panel.playlist { min-width: 0; }
+.panel.playlist .item { min-width: 0; }
+.fragsec .item .name { font-size: 17px; }
+.panel.stage { position: relative; }
+/* [ час ] поверх відео */
+.markctl.ovl { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; pointer-events: none; }
+.markctl.ovl .grp { pointer-events: auto; }
+.markctl.ovl .sq { background: rgba(0,0,0,.45); border-color: rgba(255,255,255,.18); }
+.markctl.ovl .bigtime { color: var(--accent);
+  text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000, 0 0 8px rgba(0,0,0,.8); }
 .panel.side .sec + .sec { border-top: 1px solid var(--surf3); }
 .actions { flex: none; border-top: 1px solid var(--surf3); padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
 /* праві краї рядків — щоб регулятор у куті нічого не перекривав (що нижче рядок, то ширше коло) */
@@ -171,7 +193,7 @@ main {
 .clipctl button.save b { font-size: 22px; }
 .clipctl button.set { border-color: var(--clip); }
 .clipctl button.set small { color: var(--clip); }
-.markctl { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.markctl { align-items: center; }
 .markctl .grp { grid-column: 2; justify-self: center; display: flex; align-items: center; gap: 12px; }
 .markctl .sq, .savectl .sq { width: 56px; height: 56px; padding: 0; border-radius: 10px; }
 .markctl .br { font-size: 26px; font-weight: 700; line-height: 1; }
@@ -296,7 +318,10 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   body { height: auto; min-height: 100%; }
   main { grid-template-columns: 1fr; }
   .panel { max-height: 42vh; }
-  .panel.playlist { max-height: 30vh; }
+  .panel.playlist { max-height: none; }
+  .panel.playlist > .list { max-height: 24vh; flex: none; }
+  .panel.playlist .fragsec { flex: none; }
+  .fragsec .list { max-height: 34vh; }
   .panel.stage { max-height: none; }
   .vidbox { aspect-ratio: 16 / 9; flex: none; }
   .panel.side { max-height: none; }
@@ -357,6 +382,11 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
     <h2><i class="l"><button id="btnAdd" class="hsq accent" title="Додати файли">+</button></i><span>Плейлист</span><i class="r"></i></h2>
     <input type="file" id="fileInput" accept="audio/*,video/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.amr,.mp4,.m4v,.webm,.mkv,.mov,.3gp" multiple hidden>
     <div class="list" id="playlist"></div>
+    <div class="sec fragsec">
+      <h2><span>Фрагменти</span><i class="r"><button id="btnSaveVid" class="hsq accent save vid" title="Зберегти фрагмент як відео"><b>⬇</b><small>ВІДЕО</small></button><button id="btnSaveClip" class="hsq accent save" title="Зберегти фрагмент як MP3"><b>⬇</b><small>MP3</small></button></i></h2>
+      <div class="list" id="clipList"></div>
+      <div class="progress" id="progress"></div>
+    </div>
     <div class="pfoot spdrow">
       <div class="speed">
         <button id="spDown" class="arr" title="Повільніше (−0,05)">◀</button>
@@ -372,7 +402,7 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
       <svg class="stagelogo" viewBox="-39.83 -39.83 79.66 79.66" fill="currentColor" aria-hidden="true"><path d="M2.00 -4.83 L11.00 -13.83 L11.00 -39.83 L2.00 -30.83 Z M-2.00 -4.83 L-11.00 -13.83 L-11.00 -39.83 L-2.00 -30.83 Z M-4.83 -2.00 L-13.83 -11.00 L-39.83 -11.00 L-30.83 -2.00 Z M-4.83 2.00 L-13.83 11.00 L-39.83 11.00 L-30.83 2.00 Z M-2.00 4.83 L-11.00 13.83 L-11.00 39.83 L-2.00 30.83 Z M2.00 4.83 L11.00 13.83 L11.00 39.83 L2.00 30.83 Z M4.83 2.00 L13.83 11.00 L39.83 11.00 L30.83 2.00 Z M4.83 -2.00 L13.83 -11.00 L39.83 -11.00 L30.83 -2.00 Z M26.00 -33.50 L24.15 -28.55 L18.87 -28.32 L23.00 -25.03 L21.59 -19.93 L26.00 -22.85 L30.41 -19.93 L29.00 -25.03 L33.13 -28.32 L27.85 -28.55 Z"/></svg>
       <video id="audio" preload="metadata" playsinline></video><canvas id="revCanvas"></canvas><video id="revVideo" muted playsinline preload="auto"></video>
     </div>
-    <div class="pfoot markctl">
+    <div class="markctl ovl">
       <div class="grp">
         <button id="btnStart" class="sq br" title="Початок фрагмента = поточна позиція  ( [ )">[<span id="lblStart" hidden></span></button>
         <div class="bigtime" id="tCur">00:00:00</div>
@@ -388,11 +418,6 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
         <i class="l"></i><span>Мітки</span><i class="r"></i>
       </h2>
       <div class="list" id="markList"></div>
-    </div>
-    <div class="sec">
-      <h2><i class="l"></i><span>Фрагменти</span><i class="r"><button id="btnSaveVid" class="hsq accent save vid" title="Зберегти фрагмент як відео"><b>⬇</b><small>ВІДЕО</small></button><button id="btnSaveClip" class="hsq accent save" title="Зберегти фрагмент як MP3"><b>⬇</b><small>MP3</small></button></i></h2>
-      <div class="list" id="clipList"></div>
-      <div class="progress" id="progress"></div>
     </div>
     <div class="actions">
       <div class="arow r1">
@@ -1866,7 +1891,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v48';
+const APP_VER = 'v49';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
