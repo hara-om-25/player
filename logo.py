@@ -40,17 +40,20 @@ else:
         lw = max(2, int(1.3*u))
         if kind == 'audio':        # звукові смуги: над зіркою, обабіч неї й під нею
             bar = lambda x1, x2, dy: dr.rounded_rectangle([X0 + x1*u, Y0 + dy*u - 0.95*u, X0 + x2*u, Y0 + dy*u + 0.95*u], radius=0.95*u, fill=Y)
-            bar(-7, 7, -8.6); bar(-11.5, 11.5, 0.4); bar(-7, 7, 9.4)
+            bar(-7, 7, -8.6); bar(-7, 7, 0.4); bar(-7, 7, 9.4)
         elif kind == 'video':      # око, зірка — зіниця
             w, h = 12.0, 7.5          # мигдалеве око: дві дуги y = ±h(1 − (x/w)²), що сходяться в кутиках
             xs_ = [w*(i/40*2 - 1) for i in range(41)]
             top = [(X0 + x*u, Y0 - h*(1 - (x/w)**2)*u) for x in xs_]
             bot = [(X0 + x*u, Y0 + h*(1 - (x/w)**2)*u) for x in reversed(xs_)]
             dr.line(top + bot + top[:2], fill=Y, width=lw, joint='curve')
+            pr = 3.6; dr.ellipse([X0 - pr*u, Y0 - pr*u, X0 + pr*u, Y0 + pr*u], fill=Y)   # зіниця
         elif kind == 'editor':     # кадр кіноплівки з перфорацією
             w, h = 9.0, 9.5
             dr.rounded_rectangle([X0 - w*u, Y0 - h*u, X0 + w*u, Y0 + h*u], radius=1.2*u, outline=Y, width=lw)
             for side in (-1, 1):
+                xl = X0 + side*(w - 3.6)*u                 # межа між перфорацією й кадром
+                dr.line([(xl, Y0 - h*u), (xl, Y0 + h*u)], fill=Y, width=lw)
                 x = X0 + side*(w - 2.0)*u
                 for k in range(-3, 4):
                     y = Y0 + k*2.6*u
