@@ -20,7 +20,9 @@
   src: url(fonts/tektur-latin-ext.woff2) format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 @font-face { font-family: 'Tektur'; font-style: normal; font-weight: 400 900; font-display: swap;
   src: url(fonts/tektur-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+/* колонки: вузький плейлист | широка середина з відео | мітки й фрагменти */
 :root {
+  --cols: minmax(200px, 1fr) minmax(0, 3fr) minmax(0, 2fr);
   --bg:      #1a1b1d;   /* основний фон — темно-сірий */
   --surface: #151618;
   --surf2:   #1d1f21;
@@ -59,7 +61,7 @@ input[type=text]:focus { outline: 2px solid var(--accent); border-color: transpa
 
 /* ── header ───────────────────────────── */
 header {   /* ті самі три колонки, що й у панелей, — щоб вирівнювати по їхніх краях */
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 10px;
+  display: grid; grid-template-columns: var(--cols); align-items: center; gap: 10px;
   padding: 10px; background: var(--surface); border-bottom: 1px solid var(--surf3);
 }
 header .logo { width: 26px; height: 26px; color: var(--accent); flex: none; }
@@ -81,7 +83,7 @@ header .ver:hover { border-color: var(--surf3); color: var(--text); }
 /* ── main 3 panels ────────────────────── */
 main {
   flex: 1; min-height: 0;
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: grid; grid-template-columns: var(--cols);
   gap: 10px; padding: 10px;
 }
 .panel {
@@ -104,10 +106,20 @@ main {
 .panel h2 .hsq.save small { font-size: 11px; font-weight: 700; }
 .panel h2 .hsq.vid { width: 64px; margin-right: 8px; display: none; }
 .panel h2 .hsq.vid.on { display: flex; }
-.vidbox { display: none; background: #000; border-bottom: 1px solid var(--surf3); aspect-ratio: 16 / 9; }
-.vidbox.on { display: block; }
+.vidbox { flex: 1; min-height: 0; background: #0d0e0f; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.vidbox.on { background: #000; }
+.vidbox > #audio { visibility: hidden; position: absolute; }
+.vidbox.on > #audio { visibility: visible; position: static; }
+.stagelogo { width: 28%; max-width: 180px; color: var(--surf3); }
+.vidbox.on .stagelogo { display: none; }
+.panel.side .sec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.panel.side .sec + .sec { border-top: 1px solid var(--surf3); }
+.pfoot.actions { gap: 10px; align-items: center; padding-right: var(--jogR); flex-wrap: wrap; }
+.actions .act { font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 12px 14px; color: var(--accent); border-color: var(--accent); }
+.actions .untrim { display: none; padding: 12px 12px; }
+.actions .untrim.on { display: inline-block; }
 .vidbox { position: relative; }
-.vidbox video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.vidbox.on > #audio { width: 100%; height: 100%; object-fit: contain; display: block; }
 /* відтворення назад: кадри малюються сюди поверх відео */
 #revCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: none; background: #000; }
 #revCanvas.on { display: block; }
@@ -166,7 +178,6 @@ main {
 .progress.on { display: block; }
 
 /* marks panel */
-.panel.marks h2 button.star { color: var(--star); font-size: 20px; }
 .item .t { color: var(--star); font-variant-numeric: tabular-nums; font-size: 17px; }
 
 /* ── timeline ─────────────────────────── */
@@ -278,8 +289,11 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   main { grid-template-columns: 1fr; }
   .panel { max-height: 42vh; }
   .panel.playlist { max-height: 30vh; }
-  .panel.playlist:has(.vidbox.on) { max-height: none; }
-  .panel.playlist:has(.vidbox.on) .list { max-height: 22vh; }
+  .panel.stage { max-height: none; }
+  .vidbox { aspect-ratio: 16 / 9; flex: none; }
+  .panel.side { max-height: none; }
+  .panel.side .sec { max-height: 34vh; }
+  .pfoot.actions { padding-right: 10px; }
   .transport { grid-template-columns: 1fr; }
   .transport .mid { grid-column: 1; gap: 4px; }
   .transport .skip { min-width: 0; flex: 1; padding: 10px 2px; }
@@ -326,24 +340,19 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
 </header>
 
 <main>
-  <!-- плейлист -->
+  <!-- плейлист — вузька колонка -->
   <section class="panel playlist">
     <h2><i class="l"><button id="btnAdd" class="hsq accent" title="Додати файли">+</button></i><span>Плейлист</span><i class="r"></i></h2>
     <input type="file" id="fileInput" accept="audio/*,video/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.amr,.mp4,.m4v,.webm,.mkv,.mov,.3gp" multiple hidden>
-    <!-- той самий елемент грає і аудіо, і відео; для відео — екран над списком -->
-    <div class="vidbox" id="vidbox"><video id="audio" preload="metadata" playsinline></video><canvas id="revCanvas"></canvas><video id="revVideo" muted playsinline preload="auto"></video></div>
     <div class="list" id="playlist"></div>
   </section>
 
-  <!-- мітки -->
-  <section class="panel marks">
-    <h2>
-      <i class="l"><button id="btnBackup" class="hbtn" title="Зберегти всі мітки й фрагменти у файл (резервна копія)">Копіювати</button></i>
-      <span>Мітки</span>
-      <i class="r"><button id="btnRestore" class="hbtn" title="Відновити мітки й фрагменти з резервної копії">Відновити</button></i>
-      <input type="file" id="restoreInput" accept=".json,application/json" hidden>
-    </h2>
-    <div class="list" id="markList"></div>
+  <!-- середина: екран (відео) і [ час ] -->
+  <section class="panel stage">
+    <div class="vidbox" id="vidbox">
+      <svg class="stagelogo" viewBox="-39.83 -39.83 79.66 79.66" fill="currentColor" aria-hidden="true"><path d="M2.00 -4.83 L11.00 -13.83 L11.00 -39.83 L2.00 -30.83 Z M-2.00 -4.83 L-11.00 -13.83 L-11.00 -39.83 L-2.00 -30.83 Z M-4.83 -2.00 L-13.83 -11.00 L-39.83 -11.00 L-30.83 -2.00 Z M-4.83 2.00 L-13.83 11.00 L-39.83 11.00 L-30.83 2.00 Z M-2.00 4.83 L-11.00 13.83 L-11.00 39.83 L-2.00 30.83 Z M2.00 4.83 L11.00 13.83 L11.00 39.83 L2.00 30.83 Z M4.83 2.00 L13.83 11.00 L39.83 11.00 L30.83 2.00 Z M4.83 -2.00 L13.83 -11.00 L39.83 -11.00 L30.83 -2.00 Z M26.00 -33.50 L24.15 -28.55 L18.87 -28.32 L23.00 -25.03 L21.59 -19.93 L26.00 -22.85 L30.41 -19.93 L29.00 -25.03 L33.13 -28.32 L27.85 -28.55 Z"/></svg>
+      <video id="audio" preload="metadata" playsinline></video><canvas id="revCanvas"></canvas><video id="revVideo" muted playsinline preload="auto"></video>
+    </div>
     <div class="pfoot markctl">
       <div class="grp">
         <button id="btnStart" class="sq br" title="Початок фрагмента = поточна позиція  ( [ )">[<span id="lblStart" hidden></span></button>
@@ -352,13 +361,29 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
       </div>
     </div>
   </section>
-  <!-- фрагменти (окремі mp3) -->
-  <section class="panel clips">
-    <h2><i class="l"></i><span>Фрагменти → MP3</span><i class="r"><button id="btnSaveVid" class="hsq accent save vid" title="Зберегти фрагмент як відео"><b>⬇</b><small>ВІДЕО</small></button><button id="btnSaveClip" class="hsq accent save" title="Зберегти фрагмент як MP3"><b>⬇</b><small>MP3</small></button></i></h2>
-    <div class="list" id="clipList"></div>
-    <div class="progress" id="progress"></div>
-  </section>
 
+  <!-- праворуч: мітки, під ними фрагменти, унизу кнопки -->
+  <section class="panel side">
+    <div class="sec">
+      <h2>
+        <i class="l"><button id="btnBackup" class="hbtn" title="Зберегти всі мітки й фрагменти у файл (резервна копія)">Копіювати</button></i>
+        <span>Мітки</span>
+        <i class="r"><button id="btnRestore" class="hbtn" title="Відновити мітки й фрагменти з резервної копії">Відновити</button></i>
+        <input type="file" id="restoreInput" accept=".json,application/json" hidden>
+      </h2>
+      <div class="list" id="markList"></div>
+    </div>
+    <div class="sec">
+      <h2><i class="l"></i><span>Фрагменти</span><i class="r"><button id="btnSaveVid" class="hsq accent save vid" title="Зберегти фрагмент як відео"><b>⬇</b><small>ВІДЕО</small></button><button id="btnSaveClip" class="hsq accent save" title="Зберегти фрагмент як MP3"><b>⬇</b><small>MP3</small></button></i></h2>
+      <div class="list" id="clipList"></div>
+      <div class="progress" id="progress"></div>
+    </div>
+    <div class="pfoot actions">
+      <button id="btnLastMin" class="act" title="Перейти на останні 60 секунд файлу й відтворити">Остання хвилина</button>
+      <button id="btnTrim" class="act" title="Прибрати все від початку до поточного місця">Обрізать</button>
+      <button id="btnUntrim" class="act untrim" title="Повернути обрізане">↺</button>
+    </div>
+  </section>
 </main>
 
 <div class="footer">
@@ -916,7 +941,9 @@ function openTrack(i, autoplay) {
   audio.playbackRate = speed;
   audio.onloadedmetadata = () => {
     audio.playbackRate = speed;
-    if (data.pos && data.pos < dur() - 2) audio.currentTime = data.pos;
+    if (data.pos && data.pos < dur() - 2) audio.currentTime = Math.max(data.pos, T0());
+    else if (T0()) audio.currentTime = T0();
+    $('btnUntrim').classList.toggle('on', !!T0());
     if (audio.videoWidth) showVideo(true);
     renderBar(); updateTime();
     if (autoplay) audio.play().catch(() => {});
@@ -932,6 +959,24 @@ function openTrack(i, autoplay) {
 function renderAll() { renderPlaylist(); renderMarks(); renderClips(); renderSel(); renderBar(); updateTime(); }
 
 $('btnAdd').onclick = () => $('fileInput').click();
+$('btnLastMin').onclick = () => {
+  if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
+  clipStopAt = null; seek(Math.max(T0(), dur() - 60)); audio.play().catch(() => {});
+};
+$('btnTrim').onclick = () => {
+  if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
+  const t = audio.currentTime;
+  if (t - T0() < 0.5) return toast('Перемотайте туди, звідки має починатися файл');
+  data.trim = t; save();
+  $('btnUntrim').classList.add('on');
+  renderAll(); toast('Обрізано: файл тепер починається з ' + hms(t) + '. ↺ — повернути');
+};
+$('btnUntrim').onclick = () => {
+  if (!data) return;
+  data.trim = 0; save();
+  $('btnUntrim').classList.remove('on');
+  renderAll(); toast('Обрізане повернуто');
+};
 $('fileInput').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
 document.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drop'); });
 document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drop'); });
@@ -978,9 +1023,11 @@ function togglePlay() {
   if (!hasTrack()) { $('fileInput').click(); return; }
   if (audio.paused) audio.play().catch(() => {}); else audio.pause();
 }
+const T0 = () => (data && data.trim) || 0;     // початок після «Обрізать»
+const span = () => Math.max(0.001, dur() - T0());
 function seek(t) {
   if (!hasTrack() || !dur()) return;
-  audio.currentTime = Math.max(0, Math.min(dur() - 0.05, t));
+  audio.currentTime = Math.max(T0(), Math.min(dur() - 0.05, t));
   updateTime();
 }
 const skip = s => seek(audio.currentTime + s);
@@ -1088,8 +1135,8 @@ const Rev = (() => {
   }
   const prefetch = () => {
     const first = chunks[0];
-    if (loading || !first || first.a <= 0) return;
-    const a = Math.max(0, first.a - CH), b = first.a, g = gen;
+    if (loading || !first || first.a <= T0()) return;
+    const a = Math.max(T0(), first.a - CH), b = first.a, g = gen;
     loading = capture(a, b, g).then(c => { if (g === gen) chunks.unshift(c); else c.frames.forEach(f => f.bmp.close()); loading = null; });
   };
   function draw(ts) {
@@ -1099,7 +1146,7 @@ const Rev = (() => {
     if (!first) return;
     // не забігаємо за підготовлені кадри — чекаємо наступний шматок
     const floor = first.frames.length ? first.frames[0].t : first.a;
-    cursor = Math.max(cursor - dt * R.rate, loading || first.a > 0 ? floor : 0);
+    cursor = Math.max(cursor - dt * R.rate, loading || first.a > T0() ? floor : T0());
     // знайти кадр з найбільшим t <= cursor
     let fr = null;
     for (const c of chunks) for (const f of c.frames) if (f.t <= cursor + 1e-4 && (!fr || f.t > fr.t)) fr = f;
@@ -1108,7 +1155,7 @@ const Rev = (() => {
     // звільняємо пам'ять від уже показаних шматків
     while (chunks.length > 1 && chunks[chunks.length - 1].a > cursor + 0.1) chunks.pop().frames.forEach(f => f.bmp.close());
     if (cursor - first.a < CH * 1.9) prefetch();   // наступний шматок — заздалегідь
-    if (cursor <= 0.001 && first.a <= 0) { R.stop(false); }
+    if (cursor <= T0() + 0.001 && first.a <= T0()) { R.stop(false); }
   }
   R.start = async rate => {
     R.active = true; R.rate = rate; gen++;
@@ -1123,7 +1170,7 @@ const Rev = (() => {
     cv.style.objectFit = 'contain'; cv.classList.add('on');
     audio.pause();
     chunks = [];
-    const c = await capture(Math.max(0, cursor - CH), cursor, g);
+    const c = await capture(Math.max(T0(), cursor - CH), cursor, g);
     if (g !== gen) { c.frames.forEach(f => f.bmp.close()); return; }
     chunks = [c];
     prefetch();
@@ -1197,7 +1244,7 @@ const JOG_LIM = 45 - Math.asin(14 / 72) * 180 / Math.PI;
       audio.muted = true; audio.playbackRate = 0.25;
       revT = setInterval(() => {
         const t = audio.currentTime - (Math.abs(rate) * 0.1 + 0.025);
-        if (t <= 0) { audio.currentTime = 0; return; }
+        if (t <= T0()) { audio.currentTime = T0(); return; }
         audio.currentTime = t;
       }, 100);
     }
@@ -1252,16 +1299,17 @@ audio.onplay = () => setPlayIcon(true);
 audio.onpause = () => { if (Rev.active) return; setPlayIcon(false); if (data) { data.pos = audio.currentTime; save(); } };
 audio.onended = () => { if (data) { data.pos = 0; save(); } if (cur < tracks.length - 1) openTrack(cur + 1, true); };
 audio.ontimeupdate = () => {
+  if (T0() && audio.currentTime < T0() - 0.05 && !Rev.active) audio.currentTime = T0();
   if (clipStopAt != null && audio.currentTime >= clipStopAt) { audio.pause(); clipStopAt = null; }
   updateTime();
 };
 let lastPosSave = 0;
 function updateTime(tt) {
-  const d = dur(), t = tt ?? (audio.currentTime || 0), p = d ? t / d * 100 : 0;
+  const d = dur(), t = tt ?? (audio.currentTime || 0), p = d ? Math.max(0, (t - T0()) / span() * 100) : 0;
   $('fill').style.width = p + '%';
   $('knob').style.left = p + '%';
-  $('tCur').textContent = hms(t);
-  $('tDur').textContent = hms(d);
+  $('tCur').textContent = hms(t - T0());
+  $('tDur').textContent = hms(d - T0());
   if (data && Date.now() - lastPosSave > 5000 && !audio.paused) { data.pos = t; save(); lastPosSave = Date.now(); }
 }
 setInterval(() => { if (!audio.paused) updateTime(); }, 250);
@@ -1269,7 +1317,7 @@ setInterval(() => { if (!audio.paused) updateTime(); }, 250);
 /* перетягування по шкалі */
 (() => {
   const bar = $('bar'); let drag = false;
-  const at = e => { const r = bar.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * dur(); };
+  const at = e => { const r = bar.getBoundingClientRect(); return T0() + Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * span(); };
   bar.addEventListener('pointerdown', e => { if (!dur()) return; drag = true; bar.setPointerCapture(e.pointerId); clipStopAt = null; seek(at(e)); });
   bar.addEventListener('pointermove', e => { if (drag) seek(at(e)); });
   bar.addEventListener('pointerup', () => { drag = false; });
@@ -1280,8 +1328,8 @@ function renderBar() {
   const d = dur(), el = $('barExtras');
   if (!d || !data) { el.innerHTML = ''; renderSel(); return; }
   el.innerHTML =
-    data.clips.map(c => `<div class="cliprange" style="left:${c.start / d * 100}%;width:${Math.max(0.3, (c.end - c.start) / d * 100)}%" title="${esc(c.name)}"></div>`).join('') +
-    data.marks.map(m => `<div class="mk" style="left:${m.t / d * 100}%" title="${esc(m.name)}">★</div>`).join('');
+    data.clips.filter(c => c.end > T0()).map(c => { const a = Math.max(c.start, T0()); return `<div class="cliprange" style="left:${(a - T0()) / span() * 100}%;width:${Math.max(0.3, (c.end - a) / span() * 100)}%" title="${esc(c.name)}"></div>`; }).join('') +
+    data.marks.filter(m => m.t >= T0()).map(m => `<div class="mk" style="left:${(m.t - T0()) / span() * 100}%" title="${esc(m.name)}">★</div>`).join('');
   renderSel();
 }
 
@@ -1299,10 +1347,12 @@ function renderMarks() {
   const el = $('markList');
   if (!data) { el.innerHTML = '<div class="empty">Немає відкритого файлу</div>'; return; }
   if (!data.marks.length) { el.innerHTML = '<div class="empty">Натисніть ★, щоб поставити мітку на поточній позиції</div>'; return; }
-  el.innerHTML = data.marks.map((m, i) => `
+  if (!data.marks.some(m => m.t >= T0())) { el.innerHTML = '<div class="empty">Натисніть ★, щоб поставити мітку на поточній позиції</div>'; return; }
+  let k = 0;
+  el.innerHTML = data.marks.map((m, i) => m.t < T0() ? '' : `
     <div class="item" data-i="${i}">
-      <span class="num">${i + 1}.</span>
-      <span class="t">${fmt(m.t)}</span>
+      <span class="num">${++k}.</span>
+      <span class="t">${fmt(m.t - T0())}</span>
       <span class="name" title="${esc(m.name)}">${esc(m.name)}</span>
       <span class="acts">
         <button data-a="ren" title="Перейменувати">✎</button>
@@ -1342,8 +1392,9 @@ function renderSel() {
   if (d && (selStart != null || selEnd != null)) {
     const s = selStart ?? selEnd, e = selEnd ?? selStart;
     sel.style.display = 'block';
-    sel.style.left = s / d * 100 + '%';
-    sel.style.width = Math.max(0, (e - s) / d * 100) + '%';
+    const a = Math.max(s, T0());
+    sel.style.left = (a - T0()) / span() * 100 + '%';
+    sel.style.width = Math.max(0, (e - a) / span() * 100) + '%';
   } else sel.style.display = 'none';
 }
 $('btnStart').onclick = () => setSel(audio.currentTime, null);
@@ -1371,15 +1422,16 @@ function renderClips() {
   const el = $('clipList');
   if (!data) { el.innerHTML = '<div class="empty">Немає відкритого файлу</div>'; return; }
   if (!data.clips.length) {
-    el.innerHTML = '<div class="empty">Позначте <b>[</b> початок і <b>]</b> кінець (під мітками), потім <b>⬇</b> — фрагмент збережеться окремим MP3 з вашою назвою.</div>';
+    el.innerHTML = '<div class="empty">Позначте <b>[</b> початок і <b>]</b> кінець (під екраном), потім <b>⬇</b> — фрагмент збережеться окремим MP3 з вашою назвою.</div>';
     return;
   }
   const vid = isVideo(tracks[cur]);
-  el.innerHTML = data.clips.map((c, i) => `
+  let k = 0;
+  el.innerHTML = data.clips.map((c, i) => c.end <= T0() ? '' : `
     <div class="item" data-i="${i}">
-      <span class="num">${i + 1}.</span>
+      <span class="num">${++k}.</span>
       <span class="col"><span class="name" title="${esc(c.name)}">${esc(c.name)}</span>
-      <span class="meta">${fmt(c.start)}–${fmt(c.end)}</span></span>
+      <span class="meta">${fmt(Math.max(0, c.start - T0()))}–${fmt(c.end - T0())}</span></span>
       <span class="acts">
         <button data-a="play" title="Прослухати фрагмент">▶</button>
         <button data-a="dl" title="Зберегти MP3">⬇</button>${vid ? '<button data-a="vid" title="Зберегти відео">🎬</button>' : ''}
@@ -1774,7 +1826,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v44';
+const APP_VER = 'v45';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
