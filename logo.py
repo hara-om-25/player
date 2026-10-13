@@ -27,16 +27,35 @@ if sys.argv[1] == 'svg':          # для шапки: viewBox навколо ф
     print(f'<svg class="logo" viewBox="{-half:.2f} {-half:.2f} {2*half:.2f} {2*half:.2f}" fill="currentColor" aria-hidden="true"><path d="{svg_path()}"/></svg>')
 else:
     out = sys.argv[2]
-    glyph = sys.argv[3] if len(sys.argv) > 3 else ''   # знак застосунку в кружечку внизу праворуч: ♫ ▶ ✂
-    from PIL import ImageFont
+    kind = sys.argv[3] if len(sys.argv) > 3 else ''   # audio / video / editor — що намалювати довкола зірки
+    BG, Y = '#1a1b1d', '#ffd23f'
+    scx, scy = cx - mx, cy - my                         # центр зірки після центрування
     for n in (192, 512):
-        S4 = n*4; im = Image.new('RGB', (S4, S4), '#1a1b1d'); dr = ImageDraw.Draw(im)
-        sc = S4*(0.36 if glyph else 0.40)/half          # фігура займає 80% іконки (зі знаком — 72%)
-        cx0 = cy0 = S4/2 - (S4*0.04 if glyph else 0)
-        for s in shapes: dr.polygon([(cx0+x*sc, cy0-y*sc) for x, y in s], fill='#ffd23f')
-        if glyph:
-            r = S4*0.19; bx = by = S4*0.76
-            dr.ellipse([bx-r, by-r, bx+r, by+r], fill='#151618', outline='#ffd23f', width=int(S4*0.018))
-            f = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', int(r*(1.75 if glyph == '✂' else 1.25)))
-            dr.text((bx, by), glyph, font=f, fill='#ffd23f', anchor='mm')
+        S4 = n*4; im = Image.new('RGB', (S4, S4), BG); dr = ImageDraw.Draw(im)
+        sc = S4*0.40/half          # фігура займає 80% іконки
+        P = lambda x, y: (S4/2 + x*sc, S4/2 - y*sc)
+        for s in pieces: dr.polygon([P(x - mx, y - my) for x, y in s], fill=Y)
+        u = sc                     # 1 одиниця логотипа в пікселях
+        X0, Y0 = P(scx, scy)
+        lw = max(2, int(1.3*u))
+        if kind == 'audio':        # звукові смуги: над зіркою, обабіч неї й під нею
+            bar = lambda x1, x2, dy: dr.rounded_rectangle([X0 + x1*u, Y0 + dy*u - 0.95*u, X0 + x2*u, Y0 + dy*u + 0.95*u], radius=0.95*u, fill=Y)
+            bar(-7, 7, -9.6); bar(-11.5, -7.2, 0.4); bar(7.2, 11.5, 0.4); bar(-7, 7, 8.9)
+        elif kind == 'video':      # око, зірка — зіниця
+            w, h = 12.0, 7.5          # мигдалеве око: дві дуги y = ±h(1 − (x/w)²), що сходяться в кутиках
+            xs_ = [w*(i/40*2 - 1) for i in range(41)]
+            top = [(X0 + x*u, Y0 - h*(1 - (x/w)**2)*u) for x in xs_]
+            bot = [(X0 + x*u, Y0 + h*(1 - (x/w)**2)*u) for x in reversed(xs_)]
+            dr.line(top + bot + top[:2], fill=Y, width=lw, joint='curve')
+        elif kind == 'editor':     # кадр кіноплівки з перфорацією
+            w, h = 9.0, 9.5
+            dr.rounded_rectangle([X0 - w*u, Y0 - h*u, X0 + w*u, Y0 + h*u], radius=1.2*u, outline=Y, width=lw)
+            for side in (-1, 1):
+                x = X0 + side*(w - 2.0)*u
+                for k in range(-3, 4):
+                    y = Y0 + k*2.6*u
+                    dr.rectangle([x - 0.6*u, y - 0.7*u, x + 0.6*u, y + 0.7*u], fill=Y)
+        rs = 1.0 if not kind else 0.8          # зірка (в оці й кадрі трохи менша)
+        star_px = [P(scx + (x - scx)*rs, scy + (y - scy)*rs) for x, y in [(a - mx, b - my) for a, b in star]]
+        dr.polygon(star_px, fill=Y)
         im.resize((n, n), Image.LANCZOS).save(f'{out}/icon-{n}.png')
