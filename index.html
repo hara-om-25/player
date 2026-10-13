@@ -22,7 +22,7 @@
   src: url(fonts/tektur-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 /* колонки: вузький плейлист | широка середина з відео | мітки й фрагменти */
 :root {
-  --cols: minmax(200px, 1fr) minmax(0, 3fr) minmax(0, 2fr);
+  --cols: minmax(170px, 1fr) minmax(0, 3.2fr) minmax(280px, 1.5fr);
   --bg:      #1a1b1d;   /* основний фон — темно-сірий */
   --surface: #151618;
   --surf2:   #1d1f21;
@@ -68,7 +68,7 @@ header .logo { width: 26px; height: 26px; color: var(--accent); flex: none; }
 header h1 { font-size: 17px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hc1, .hc2, .hc3 { display: flex; align-items: center; gap: 10px; min-width: 0; }
 /* назва файлу й тривалість — над панеллю «Мітки», по її правому краю */
-.hc2 { justify-content: flex-end; gap: 14px; }
+.hc2 { justify-content: center; gap: 14px; }   /* по центру над відео */
 .hc3 { justify-content: flex-end; }
 header .now { color: var(--dim); font-weight: 400; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 header .hdur { flex: none; font-size: 20px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
@@ -114,9 +114,17 @@ main {
 .vidbox.on .stagelogo { display: none; }
 .panel.side .sec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .panel.side .sec + .sec { border-top: 1px solid var(--surf3); }
-.pfoot.actions { gap: 10px; align-items: center; padding-right: var(--jogR); flex-wrap: wrap; }
-.actions .act { font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 12px 14px; color: var(--accent); border-color: var(--accent); }
-.actions .untrim { display: none; padding: 12px 12px; }
+.actions { flex: none; border-top: 1px solid var(--surf3); padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+/* праві краї рядків — щоб регулятор у куті нічого не перекривав (що нижче рядок, то ширше коло) */
+.actions .arow { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+.actions .aspacer { flex: none; height: 0; }
+.actions .alabel { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); margin-right: 2px; }
+.actions .act.last { padding: 8px 7px; min-width: 0; font-size: 13px; }
+.actions .star { width: 52px; height: 52px; padding: 0; font-size: 30px; color: var(--star); border-radius: 10px; }
+.actions .jogval { margin-left: 0; min-width: 5.8em; font-size: 15px; padding: 7px 6px; white-space: nowrap; }
+.spdrow { justify-content: center; }
+.actions .act { font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: 9px 10px; font-size: 14px; color: var(--accent); border-color: var(--accent); }
+.actions .untrim { display: none; padding: 10px 11px; }
 .actions .untrim.on { display: inline-block; }
 .vidbox { position: relative; }
 .vidbox.on > #audio { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -173,7 +181,7 @@ main {
 .savectl .sq { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1; }
 .savectl .sq b { font-size: 20px; }
 .savectl .sq small { font-size: 12px; font-weight: 700; color: #111; }
-.panel h2 .hbtn { font-size: 13px; padding: 7px 11px; letter-spacing: 0; text-transform: none; background: var(--accent); border-color: var(--accent); color: #111; font-weight: 700; }
+.panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacing: 0; text-transform: none; background: var(--accent); border-color: var(--accent); color: #111; font-weight: 700; }
 .progress { padding: 0 10px 8px; font-size: 13px; color: var(--accent2); display: none; }
 .progress.on { display: block; }
 
@@ -208,14 +216,14 @@ main {
 
 /* ── нижній рядок і регулятор прокрутки ── */
 :root { --jogR: min(230px, 34vh); }
-.timeline { padding-right: calc(var(--jogR) + 10px); }
+.timeline { padding-right: calc(var(--jogR) + 10px); padding-bottom: 14px; }
 .transport {
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
   padding: 6px calc(var(--jogR) + 12px) calc(12px + env(safe-area-inset-bottom)) 12px;
 }
 .transport .star { width: 64px; height: 64px; padding: 0; font-size: 38px; color: var(--star); border-radius: 10px; }
 .jogval {
-  margin-left: auto; min-width: 7.5em; text-align: center; font-size: 26px; font-weight: 600;
+  margin-left: 0; min-width: 7.5em; text-align: center; font-size: 26px; font-weight: 600;
   font-variant-numeric: tabular-nums; color: var(--dim); padding: 8px 14px;
   border: 1px solid var(--surf3); border-radius: 10px; transition: color .3s, border-color .3s;
 }
@@ -293,7 +301,7 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   .vidbox { aspect-ratio: 16 / 9; flex: none; }
   .panel.side { max-height: none; }
   .panel.side .sec { max-height: 34vh; }
-  .pfoot.actions { padding-right: 10px; }
+  .actions .arow { flex-wrap: wrap; }
   .transport { grid-template-columns: 1fr; }
   .transport .mid { grid-column: 1; gap: 4px; }
   .transport .skip { min-width: 0; flex: 1; padding: 10px 2px; }
@@ -345,6 +353,13 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
     <h2><i class="l"><button id="btnAdd" class="hsq accent" title="Додати файли">+</button></i><span>Плейлист</span><i class="r"></i></h2>
     <input type="file" id="fileInput" accept="audio/*,video/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.amr,.mp4,.m4v,.webm,.mkv,.mov,.3gp" multiple hidden>
     <div class="list" id="playlist"></div>
+    <div class="pfoot spdrow">
+      <div class="speed">
+        <button id="spDown" class="arr" title="Повільніше (−0,05)">◀</button>
+        <button class="val" id="spVal" title="Обрати швидкість">×1.00</button>
+        <button id="spUp" class="arr" title="Швидше (+0,05)">▶</button>
+      </div>
+    </div>
   </section>
 
   <!-- середина: екран (відео) і [ час ] -->
@@ -378,10 +393,23 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
       <div class="list" id="clipList"></div>
       <div class="progress" id="progress"></div>
     </div>
-    <div class="pfoot actions">
-      <button id="btnLastMin" class="act" title="Перейти на останні 60 секунд файлу й відтворити">Остання хвилина</button>
-      <button id="btnTrim" class="act" title="Прибрати все від початку до поточного місця">Обрізать</button>
-      <button id="btnUntrim" class="act untrim" title="Повернути обрізане">↺</button>
+    <div class="actions">
+      <div class="arow r1">
+        <span class="alabel">Останні</span>
+        <button class="act last" data-last="90" title="Останні 90 секунд — і відтворити">90с</button>
+        <button class="act last" data-last="60" title="Останні 60 секунд — і відтворити">60с</button>
+        <button class="act last" data-last="30" title="Останні 30 секунд — і відтворити">30с</button>
+        <button class="act last" data-last="10" title="Останні 10 секунд — і відтворити">10с</button>
+      </div>
+      <div class="arow r2">
+        <button id="btnTrim" class="act" title="Прибрати все від початку до поточного місця">Обрізать</button>
+        <button id="btnUntrim" class="act untrim" title="Повернути обрізане">↺</button>
+        <div class="jogval" id="jogVal">± 0 сек</div>
+      </div>
+      <div class="aspacer" id="aspacer"></div>
+      <div class="arow r3">
+        <button id="btnMark" class="star" title="Поставити мітку на поточній позиції  ( M )">★</button>
+      </div>
     </div>
   </section>
 </main>
@@ -395,16 +423,6 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
       <div class="fill" id="fill"></div>
       <div class="knob" id="knob"></div>
     </div>
-      </div>
-
-  <div class="transport">
-    <div class="speed">
-      <button id="spDown" class="arr" title="Повільніше (−0,05)">◀</button>
-      <button class="val" id="spVal" title="Обрати швидкість">×1.00</button>
-      <button id="spUp" class="arr" title="Швидше (+0,05)">▶</button>
-    </div>
-    <button id="btnMark" class="star" title="Поставити мітку на поточній позиції  ( M )">★</button>
-    <div class="jogval" id="jogVal">± 0 сек</div>
   </div>
 </div>
 
@@ -943,7 +961,7 @@ function openTrack(i, autoplay) {
     audio.playbackRate = speed;
     if (data.pos && data.pos < dur() - 2) audio.currentTime = Math.max(data.pos, T0());
     else if (T0()) audio.currentTime = T0();
-    $('btnUntrim').classList.toggle('on', !!T0());
+    $('btnUntrim').classList.toggle('on', !!T0()); layoutActions();
     if (audio.videoWidth) showVideo(true);
     renderBar(); updateTime();
     if (autoplay) audio.play().catch(() => {});
@@ -959,22 +977,43 @@ function openTrack(i, autoplay) {
 function renderAll() { renderPlaylist(); renderMarks(); renderClips(); renderSel(); renderBar(); updateTime(); }
 
 $('btnAdd').onclick = () => $('fileInput').click();
-$('btnLastMin').onclick = () => {
+// Рядки «Останні» і «Обрізать ↺ ± сек» піднімаються рівно настільки, щоб регулятор
+// у куті (коло радіусом R з центром у правому нижньому куті вікна) їх не перекривав.
+function layoutActions() {
+  const sp = $('aspacer'); if (!sp) return;
+  sp.style.height = '0px';
+  const R = $('jog').getBoundingClientRect().width / 2.3, W = innerWidth, H = innerHeight;
+  let need = 0;
+  for (const row of document.querySelectorAll('.actions .r1, .actions .r2')) {
+    let right = 0;
+    for (const c of row.children) if (c.offsetParent) right = Math.max(right, c.getBoundingClientRect().right);
+    const free = W - 8 - right;                       // скільки місця праворуч від рядка
+    if (free >= R) continue;
+    const dyNeed = Math.sqrt(R * R - free * free);     // на такій висоті від низу коло вже не заходить
+    const dyNow = H - row.getBoundingClientRect().bottom;
+    need = Math.max(need, dyNeed - dyNow);
+  }
+  sp.style.height = Math.max(0, Math.ceil(need)) + 'px';
+}
+addEventListener('resize', layoutActions);
+document.fonts && document.fonts.ready.then(layoutActions);
+setTimeout(layoutActions, 300);
+document.querySelectorAll('[data-last]').forEach(b => b.onclick = () => {
   if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
-  clipStopAt = null; seek(Math.max(T0(), dur() - 60)); audio.play().catch(() => {});
-};
+  clipStopAt = null; seek(Math.max(T0(), dur() - +b.dataset.last)); audio.play().catch(() => {});
+});
 $('btnTrim').onclick = () => {
   if (!hasTrack() || !dur()) return toast('Спочатку відкрийте файл');
   const t = audio.currentTime;
   if (t - T0() < 0.5) return toast('Перемотайте туди, звідки має починатися файл');
   data.trim = t; save();
-  $('btnUntrim').classList.add('on');
+  $('btnUntrim').classList.add('on'); layoutActions();
   renderAll(); toast('Обрізано: файл тепер починається з ' + hms(t) + '. ↺ — повернути');
 };
 $('btnUntrim').onclick = () => {
   if (!data) return;
   data.trim = 0; save();
-  $('btnUntrim').classList.remove('on');
+  $('btnUntrim').classList.remove('on'); layoutActions();
   renderAll(); toast('Обрізане повернуто');
 };
 $('fileInput').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
@@ -1826,7 +1865,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v45';
+const APP_VER = 'v46';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
