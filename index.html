@@ -277,6 +277,9 @@ header .hbtn, .panel h2 .hbtn { font-size: 12px; padding: 6px 8px; letter-spacin
 }
 .jog .hit, .jog .hub { pointer-events: all; }
 .jog .hub { cursor: pointer; }
+.jog .pulse { opacity: 0; pointer-events: none; }
+.jog.paused .pulse { animation: jogPulse 2.4s ease-in-out infinite; }
+@keyframes jogPulse { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }
 .speed { display: flex; align-items: center; gap: 4px; }
 .speed { gap: 0; }
 .speed .arr { border-radius: 8px 0 0 8px; }
@@ -1140,6 +1143,7 @@ const skip = s => seek(audio.currentTime + s);
    Поки крутиш, «± N сек» показує, на скільки перемотано від початку оберту. */
 const JOG_SEC_PER_DEG = 1 / 3;   // 3° оберту = 1 секунда
 let jogAngle = 0;
+const JOG_DIMPLE_D = 77, JOG_DIMPLE_R = 11;    // ямка під палець: відстань від центру і радіус
 (function buildJog() {
   const svg = $('jog'), NS = 'http://www.w3.org/2000/svg';
   const pt = (r, deg) => [r * Math.cos(deg * Math.PI / 180), r * Math.sin(deg * Math.PI / 180)];
@@ -1153,34 +1157,32 @@ let jogAngle = 0;
     const [x1, y1] = pt(88.5, i * 3), [x2, y2] = pt(96, i * 3);
     ribs += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${i % 2 ? '#17181b' : '#4a4e55'}" stroke-width="1.2"/>`;
   }
-  const [m1x, m1y] = pt(102, -135), [m2x, m2y] = pt(113, -135), [dx, dy] = pt(72, -135);
+  // рифлений край: 120 зубців (по одному на поділку 3°)
+  let edge = '';
+  for (let i = 0; i <= 720; i++) { const a = i / 2, [x, y] = pt(97.5 + 1.8 * Math.cos(a * Math.PI / 1.5), a); edge += (i ? 'L' : 'M') + x.toFixed(2) + ' ' + y.toFixed(2); }
+  const [m1x, m1y] = pt(102, -135), [m2x, m2y] = pt(113, -135), [dx, dy] = pt(JOG_DIMPLE_D, -135);
   svg.innerHTML = `
   <defs>
     <radialGradient id="jgBody" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#3b3e44"/><stop offset="1" stop-color="#121315"/></radialGradient>
     <radialGradient id="jgFace" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#34373c"/><stop offset=".6" stop-color="#1f2124"/><stop offset="1" stop-color="#151618"/></radialGradient>
     <radialGradient id="jgDimple" cx="60%" cy="65%" r="70%"><stop offset="0" stop-color="#0e0f10"/><stop offset=".75" stop-color="#1b1c1f"/><stop offset="1" stop-color="#3d4046"/></radialGradient>
-    <filter id="jgGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+    <radialGradient id="jgPulse"><stop offset="0" stop-color="#ffd23f" stop-opacity=".22"/><stop offset=".75" stop-color="#ffd23f" stop-opacity=".3"/><stop offset="1" stop-color="#ffd23f" stop-opacity=".55"/></radialGradient>
   </defs>
   ${dots}
-  <circle r="100" fill="none" stroke="#ffd23f" stroke-width="6" opacity=".8" filter="url(#jgGlow)"/>
-  <circle r="100" fill="none" stroke="#ffd23f" stroke-width="1.5"/>
   <g id="jogRot">
-    <circle r="97" fill="url(#jgBody)"/>${ribs}
+    <path d="${edge}Z" fill="url(#jgBody)" stroke="#55595f" stroke-width=".7"/>${ribs}
     <circle r="88" fill="#2a2c30"/><circle r="85" fill="url(#jgFace)"/>
     <line x1="${m1x}" y1="${m1y}" x2="${m2x}" y2="${m2y}" stroke="#ffd23f" stroke-width="2.6" stroke-linecap="round"/>
-    <circle cx="${dx}" cy="${dy}" r="11.5" fill="url(#jgDimple)" stroke="#4a4e55" stroke-width=".6"/>
+    <circle cx="${dx}" cy="${dy}" r="${JOG_DIMPLE_R}" fill="url(#jgDimple)" stroke="#4a4e55" stroke-width=".6"/>
   </g>
   <circle class="hit" r="100" fill="transparent"/>
   <g class="hub" id="btnPlay">
     <circle r="50" fill="#151618" stroke="#ffd23f" stroke-width="1.2"/>
-    <g id="playIco" fill="none" stroke="#ffd23f" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></g>
+    <circle class="pulse" r="49" fill="url(#jgPulse)"/>
   </g>`;
 })();
-function setPlayIcon(playing) {
-  $('playIco').innerHTML = playing
-    ? '<line x1="-22" y1="-29" x2="-22" y2="-5"/><line x1="-11" y1="-29" x2="-11" y2="-5"/>'
-    : '<polygon points="-27,-29 -4,-16.5 -27,-4"/>';
-}
+// Без значків ▶/❚❚: на паузі центр РП лагідно блимає жовтим, під час відтворення — спокійний
+function setPlayIcon(playing) { $('jog').classList.toggle('paused', !playing); }
 setPlayIcon(false);
 $('btnPlay').addEventListener('click', togglePlay);
 // Тихе механічне клацання — на кожну поділку (3° = 1 с)
@@ -1315,7 +1317,7 @@ let frameDur = 1 / 30, frameMeasured = false;
   v.requestVideoFrameCallback(cb);
 })();
 // Межі оберту: ямка під палець (і мітка) не виходять за краї екрана — краї як упори
-const JOG_LIM = 45 - Math.asin(14 / 72) * 180 / Math.PI;
+const JOG_LIM = 45 - Math.asin((JOG_DIMPLE_R + 2.5) / JOG_DIMPLE_D) * 180 / Math.PI;
 (function jogDrag() {
   /* Два режими:
      • пауза — покрокова перемотка: поділка (3°) = 1 с, а для відео — 1 кадр;
@@ -2016,7 +2018,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v55';
+const APP_VER = 'v56';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
