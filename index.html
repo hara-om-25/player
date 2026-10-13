@@ -1045,13 +1045,17 @@ $('btnPlay').addEventListener('click', togglePlay);
     const a = ang(e); let d = a - last; last = a;
     if (d > 180) d -= 360; else if (d < -180) d += 360;
     acc += d; jogAngle += d;
-    $('jogRot').setAttribute('transform', `rotate(${jogAngle.toFixed(1)})`);
+    const g = $('jogRot'); g.style.transition = 'none'; g.style.transform = `rotate(${jogAngle.toFixed(1)}deg)`;
     show();
     if (!raf) raf = requestAnimationFrame(() => { raf = 0; seek(base + acc * JOG_SEC_PER_DEG); });
   });
   const end = () => {
     if (last === null) return;
     last = null;
+    // відпустив — регулятор плавно повертається у вихідне положення (мітка вгору-ліворуч)
+    const g = $('jogRot'), back = Math.min(600, 250 + Math.abs(jogAngle) * 2);
+    g.style.transition = `transform ${back}ms cubic-bezier(.2,.8,.3,1)`;
+    g.style.transform = 'rotate(0deg)'; jogAngle = 0;
     hideT = setTimeout(() => { val.classList.remove('on'); val.textContent = '± 0 сек'; }, 1500);
   };
   svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
@@ -1583,7 +1587,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v38';
+const APP_VER = 'v39';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
