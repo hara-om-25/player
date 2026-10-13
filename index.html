@@ -244,6 +244,13 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 30; max-width: 90vw;
 }
 .toast.on { opacity: 1; }
+.ptr {
+  position: fixed; left: 50%; top: -56px; z-index: 40; width: 44px; height: 44px; margin-left: -22px;
+  border-radius: 50%; background: var(--surface); border: 1px solid var(--surf3); color: var(--accent);
+  display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700;
+  box-shadow: 0 4px 14px rgba(0,0,0,.5); pointer-events: none;
+}
+.ptr.ready { background: var(--accent); color: #111; }
 .drop { outline: 3px dashed var(--accent); outline-offset: -8px; }
 
 /* ── mobile ───────────────────────────── */
@@ -384,6 +391,7 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
 </dialog>
 
 <div class="toast" id="toast"></div>
+<div class="ptr" id="ptr">↻</div>
 <audio id="audio" preload="metadata"></audio>
 
 <script>
@@ -1425,7 +1433,43 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v30';
+const APP_VER = 'v31';
+// «Потягни вниз — оновити». Там, де сторінка не прокручується (планшет, весь екран),
+// вбудований жест Chrome не працює — робимо свій. На телефоні лишається рідний.
+(() => {
+  const el = $('ptr'), NEED = 90;
+  let y0 = null, dy = 0;
+  const own = () => getComputedStyle(document.documentElement).overflowY === 'hidden';
+  const show = d => {
+    el.style.transition = 'none';
+    el.style.transform = `translateY(${Math.min(d * 0.6, 90)}px) rotate(${d * 2}deg)`;
+    el.classList.toggle('ready', d >= NEED);
+  };
+  const hide = () => { el.style.transition = 'transform .2s'; el.style.transform = ''; el.classList.remove('ready'); };
+  document.addEventListener('touchstart', e => {
+    y0 = null;
+    if (!own() || e.touches.length !== 1 || $('dlg').open || $('dlgInfo').open) return;
+    const t = e.target;
+    if (t.closest('.bar, .speedmenu, input, textarea')) return;
+    const list = t.closest('.list');
+    if (list && list.scrollTop > 0) return;          // список прокручений — спершу гортаємо його
+    y0 = e.touches[0].clientY; dy = 0;
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (y0 === null) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy > 10) show(dy - 10); else if (dy < 0) { y0 = null; hide(); }
+  }, { passive: true });
+  document.addEventListener('touchend', () => {
+    if (y0 === null) return;
+    y0 = null;
+    if (dy - 10 >= NEED) {
+      el.classList.add('ready');
+      if (data) { data.pos = audio.currentTime; save(); } saveSession();
+      location.reload();
+    } else hide();
+  });
+})();
 // Стала висота: перераховується лише при повороті екрана (змінилась ширина).
 // Невеликі зміни висоти (плашка) беремо тільки в бік зменшення, великі (клавіатура) — ігноруємо.
 (() => {
