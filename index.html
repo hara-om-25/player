@@ -1048,19 +1048,45 @@ const jogClick = (() => {
 // Межі оберту: ямка під палець (і мітка) не виходять за краї екрана — краї як упори
 const JOG_LIM = 45 - Math.asin(14 / 72) * 180 / Math.PI;
 (function jogDrag() {
-  const svg = $('jog'), val = $('jogVal');
-  let last = null, acc = 0, base = 0, hideT, raf = 0;
+  /* Два режими:
+     • пауза — покрокова перемотка: поділка (3°) = 1 с;
+     • відтворення — човник (shuttle): кут = швидкість і напрямок.
+       Біля нуля (±4°) — звичайна швидкість, вправо — швидше вперед до ×4,
+       вліво — відтворення назад до ×4 (кадри назад; звук на цей час вимикається —
+       браузер не вміє грати звук задом наперед). Відпустив — звичайне відтворення. */
+  const svg = $('jog'), val = $('jogVal'), DEAD = 4, MAXR = 4;
+  let last = null, acc = 0, base = 0, hideT, raf = 0, mode = 'scrub', revT = null, rate = 0;
   const ang = e => { const r = svg.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
   const show = () => {
-    const n = Math.round(acc * JOG_SEC_PER_DEG);
-    val.textContent = (n < 0 ? '− ' : '+ ') + Math.abs(n) + ' сек';
+    if (mode === 'scrub') {
+      const n = Math.round(acc * JOG_SEC_PER_DEG);
+      val.textContent = (n < 0 ? '− ' : '+ ') + Math.abs(n) + ' сек';
+    } else {
+      val.textContent = rate === 0 ? '▶ ×' + speed.toFixed(2) : (rate > 0 ? '▶▶ ×' : '◀◀ ×') + Math.abs(rate).toFixed(1);
+    }
     val.classList.add('on');
+  };
+  const shuttleRate = a => Math.abs(a) < DEAD ? 0 : Math.sign(a) * (1 + (Math.abs(a) - DEAD) / (JOG_LIM - DEAD) * (MAXR - 1));
+  const stopReverse = () => { if (revT) { clearInterval(revT); revT = null; } audio.muted = false; };
+  const applyShuttle = () => {
+    if (rate >= 0) {
+      stopReverse();
+      audio.playbackRate = rate === 0 ? speed : Math.max(rate, speed);
+    } else if (!revT) {
+      audio.muted = true; audio.playbackRate = 0.25;
+      revT = setInterval(() => {
+        const t = audio.currentTime - (Math.abs(rate) * 0.1 + 0.025);
+        if (t <= 0) { audio.currentTime = 0; return; }
+        audio.currentTime = t;
+      }, 100);
+    }
   };
   svg.addEventListener('pointerdown', e => {
     if (e.target.closest('.hub') || !e.target.closest('.hit')) return;
     if (!hasTrack()) return toast('Спочатку відкрийте файл');
     e.preventDefault(); svg.setPointerCapture(e.pointerId);
-    last = ang(e); acc = 0; base = audio.currentTime; clipStopAt = null; clearTimeout(hideT); show();
+    mode = audio.paused ? 'scrub' : 'shuttle';
+    last = ang(e); acc = 0; rate = 0; base = audio.currentTime; clipStopAt = null; clearTimeout(hideT); show();
   });
   svg.addEventListener('pointermove', e => {
     if (last === null) return;
@@ -1073,12 +1099,17 @@ const JOG_LIM = 45 - Math.asin(14 / 72) * 180 / Math.PI;
     for (let k = 0; k < Math.min(ticks, 3); k++) setTimeout(jogClick, k * 15);
     acc += d; jogAngle = na;
     const g = $('jogRot'); g.style.transition = 'none'; g.style.transform = `rotate(${jogAngle.toFixed(1)}deg)`;
+    if (mode === 'scrub') {
+      if (!raf) raf = requestAnimationFrame(() => { raf = 0; seek(base + acc * JOG_SEC_PER_DEG); });
+    } else {
+      rate = shuttleRate(jogAngle); applyShuttle();
+    }
     show();
-    if (!raf) raf = requestAnimationFrame(() => { raf = 0; seek(base + acc * JOG_SEC_PER_DEG); });
   });
   const end = () => {
     if (last === null) return;
     last = null;
+    if (mode === 'shuttle') { rate = 0; stopReverse(); audio.playbackRate = speed; }
     // відпустив — регулятор плавно повертається у вихідне положення (мітка вгору-ліворуч)
     const g = $('jogRot'), back = Math.min(600, 250 + Math.abs(jogAngle) * 2);
     g.style.transition = `transform ${back}ms cubic-bezier(.2,.8,.3,1)`;
@@ -1614,7 +1645,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v41';
+const APP_VER = 'v42';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
