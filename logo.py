@@ -27,8 +27,16 @@ if sys.argv[1] == 'svg':          # для шапки: viewBox навколо ф
     print(f'<svg class="logo" viewBox="{-half:.2f} {-half:.2f} {2*half:.2f} {2*half:.2f}" fill="currentColor" aria-hidden="true"><path d="{svg_path()}"/></svg>')
 else:
     out = sys.argv[2]
+    glyph = sys.argv[3] if len(sys.argv) > 3 else ''   # знак застосунку в кружечку внизу праворуч: ♫ ▶ ✂
+    from PIL import ImageFont
     for n in (192, 512):
         S4 = n*4; im = Image.new('RGB', (S4, S4), '#1a1b1d'); dr = ImageDraw.Draw(im)
-        sc = S4*0.40/half          # фігура займає 80% іконки
-        for s in shapes: dr.polygon([(S4/2+x*sc, S4/2-y*sc) for x, y in s], fill='#ffd23f')
+        sc = S4*(0.36 if glyph else 0.40)/half          # фігура займає 80% іконки (зі знаком — 72%)
+        cx0 = cy0 = S4/2 - (S4*0.04 if glyph else 0)
+        for s in shapes: dr.polygon([(cx0+x*sc, cy0-y*sc) for x, y in s], fill='#ffd23f')
+        if glyph:
+            r = S4*0.19; bx = by = S4*0.76
+            dr.ellipse([bx-r, by-r, bx+r, by+r], fill='#151618', outline='#ffd23f', width=int(S4*0.018))
+            f = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', int(r*(1.75 if glyph == '✂' else 1.25)))
+            dr.text((bx, by), glyph, font=f, fill='#ffd23f', anchor='mm')
         im.resize((n, n), Image.LANCZOS).save(f'{out}/icon-{n}.png')

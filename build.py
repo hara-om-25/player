@@ -5,7 +5,7 @@
   python3 build.py            — у ../audio-player, ../video-player, ../video-editor
                                 (якщо такої папки немає — у dist/<назва>)
 """
-import json, os, re, shutil
+import json, os, re, shutil, subprocess, sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 BASE = 'https://hara-om-25.github.io/'
@@ -13,18 +13,18 @@ AUDIO_EXTS = ['.mp3', '.m4a', '.aac', '.ogg', '.opus', '.wav', '.flac', '.amr']
 VIDEO_EXTS = ['.mp4', '.m4v', '.webm', '.mkv', '.mov', '.3gp']
 
 APPS = [
-    dict(id='audio-player', name='Аудіоплеєр ХАРА ОМ', short='Аудіоплеєр',
+    dict(id='audio-player', glyph='♫', name='Аудіоплеєр ХАРА ОМ', short='Аудіоплеєр',
          desc='Аудіоплеєр з мітками та збереженням фрагментів у MP3',
          mime='audio/*', exts=AUDIO_EXTS,
          # db/session — як у старому плеєрі, щоб відкритий там плейлист перейшов сюди
          feat=dict(id='audio', video=False, clips=True, trim=False, last=False,
                    db='markplayer', session='session')),
-    dict(id='video-player', name='Відеоплеєр ХАРА ОМ', short='Відеоплеєр',
+    dict(id='video-player', glyph='▶', name='Відеоплеєр ХАРА ОМ', short='Відеоплеєр',
          desc='Відеоплеєр з мітками, покадровою прокруткою та регулятором',
          mime='video/*', exts=VIDEO_EXTS,
          feat=dict(id='video', video=True, clips=False, trim=False, last=True,
                    db='markplayer-video', session='session.video')),
-    dict(id='video-editor', name='Відеоредактор ХАРА ОМ', short='Відеоредактор',
+    dict(id='video-editor', glyph='✂', name='Відеоредактор ХАРА ОМ', short='Відеоредактор',
          desc='Відеоредактор: мітки, обрізка, фрагменти у відео та MP3',
          mime='video/*', exts=VIDEO_EXTS,
          feat=dict(id='editor', video=True, clips=True, trim=True, last=True,
@@ -61,8 +61,8 @@ def build(app, out):
         fh.write(f"# {app['name']}\n\n{app['desc']}.\n\nАдреса: {BASE}{app['id']}/\n\n"
                  "**Тут нічого не правити вручну** — цей репозиторій збирається скриптом `build.py` "
                  "з репозиторію `player` (спільне джерело `src/` для аудіоплеєра, відеоплеєра й відеоредактора).\n")
-    for name in ('icon-192.png', 'icon-512.png'):
-        shutil.copy(os.path.join(ROOT, name), out)
+    # іконки: логотип + знак застосунку (♫ ▶ ✂)
+    subprocess.run([sys.executable, os.path.join(ROOT, 'logo.py'), 'png', out, app['glyph']], check=True)
     shutil.copytree(os.path.join(ROOT, 'fonts'), os.path.join(out, 'fonts'), dirs_exist_ok=True)
     print(f"{app['id']:14} {ver} → {out}")
 
