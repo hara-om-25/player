@@ -1,5 +1,5 @@
 // /player/ — тепер лише сторінка-меню. Спершу мережа, без мережі — кеш.
-const CACHE = 'player-v60';
+const CACHE = 'player-v61';
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './icon-192.png'])).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('player-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', e => {
