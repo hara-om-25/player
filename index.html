@@ -102,6 +102,11 @@ main {
 .panel h2 .hsq.save { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; letter-spacing: 0; }
 .panel h2 .hsq.save b { font-size: 17px; }
 .panel h2 .hsq.save small { font-size: 11px; font-weight: 700; }
+.panel h2 .hsq.vid { width: 64px; margin-right: 8px; display: none; }
+.panel h2 .hsq.vid.on { display: flex; }
+.vidbox { display: none; background: #000; border-bottom: 1px solid var(--surf3); aspect-ratio: 16 / 9; }
+.vidbox.on { display: block; }
+.vidbox video { width: 100%; height: 100%; object-fit: contain; display: block; }
 .panel h2 { min-height: 62px; }
 .list { flex: 1; overflow-y: auto; padding: 4px; }
 .empty { color: var(--dim); padding: 16px 12px; font-size: 14px; text-align: center; }
@@ -267,6 +272,8 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   main { grid-template-columns: 1fr; }
   .panel { max-height: 42vh; }
   .panel.playlist { max-height: 30vh; }
+  .panel.playlist:has(.vidbox.on) { max-height: none; }
+  .panel.playlist:has(.vidbox.on) .list { max-height: 22vh; }
   .transport { grid-template-columns: 1fr; }
   .transport .mid { grid-column: 1; gap: 4px; }
   .transport .skip { min-width: 0; flex: 1; padding: 10px 2px; }
@@ -316,7 +323,9 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   <!-- плейлист -->
   <section class="panel playlist">
     <h2><i class="l"><button id="btnAdd" class="hsq accent" title="Додати файли">+</button></i><span>Плейлист</span><i class="r"></i></h2>
-    <input type="file" id="fileInput" accept="audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.amr" multiple hidden>
+    <input type="file" id="fileInput" accept="audio/*,video/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.amr,.mp4,.m4v,.webm,.mkv,.mov,.3gp" multiple hidden>
+    <!-- той самий елемент грає і аудіо, і відео; для відео — екран над списком -->
+    <div class="vidbox" id="vidbox"><video id="audio" preload="metadata" playsinline></video></div>
     <div class="list" id="playlist"></div>
   </section>
 
@@ -339,7 +348,7 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   </section>
   <!-- фрагменти (окремі mp3) -->
   <section class="panel clips">
-    <h2><i class="l"></i><span>Фрагменти → MP3</span><i class="r"><button id="btnSaveClip" class="hsq accent save" title="Зберегти фрагмент як MP3"><b>⬇</b><small>MP3</small></button></i></h2>
+    <h2><i class="l"></i><span>Фрагменти → MP3</span><i class="r"><button id="btnSaveVid" class="hsq accent save vid" title="Зберегти фрагмент як відео"><b>⬇</b><small>ВІДЕО</small></button><button id="btnSaveClip" class="hsq accent save" title="Зберегти фрагмент як MP3"><b>⬇</b><small>MP3</small></button></i></h2>
     <div class="list" id="clipList"></div>
     <div class="progress" id="progress"></div>
   </section>
@@ -399,7 +408,7 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
 </dialog>
 
 <div class="toast" id="toast"></div>
-<audio id="audio" preload="metadata"></audio>
+
 
 <script>
 /* lamejs 1.2.1 — MP3-кодер (LGPL), https://github.com/zhuker/lamejs */
@@ -857,7 +866,7 @@ function renderPlaylist() {
     const badge = (n ? '★' + n : '') + (c ? ' ✂' + c : '');
     return `<div class="item ${i === cur ? 'active' : ''}" data-i="${i}">
       <span class="num">${i + 1}</span>
-      <span class="name" title="${esc(t.file.name)}">${esc(t.file.name)}</span>
+      <span class="name" title="${esc(t.file.name)}">${isVideo(t) ? '🎬 ' : ''}${esc(t.file.name)}</span>
       <span class="badge">${badge}</span>
       <span class="acts"><button data-rm="${i}" title="Прибрати зі списку">✕</button></span>
     </div>`;
@@ -884,6 +893,8 @@ $('playlist').addEventListener('click', e => {
   if (it) openTrack(+it.dataset.i, true);
 });
 
+const isVideo = t => /^video\//.test(t.file.type) || /\.(mp4|m4v|webm|mkv|mov|3gp|avi)$/i.test(t.file.name);
+function showVideo(on) { $('vidbox').classList.toggle('on', on); $('btnSaveVid').classList.toggle('on', on); }
 function openTrack(i, autoplay) {
   if (i < 0 || i >= tracks.length) return;
   if (cur >= 0 && data) { data.pos = audio.currentTime; save(); }
@@ -899,10 +910,12 @@ function openTrack(i, autoplay) {
   audio.onloadedmetadata = () => {
     audio.playbackRate = speed;
     if (data.pos && data.pos < dur() - 2) audio.currentTime = data.pos;
+    if (audio.videoWidth) showVideo(true);
     renderBar(); updateTime();
     if (autoplay) audio.play().catch(() => {});
   };
   $('nowTitle').textContent = t.file.name;
+  showVideo(isVideo(t));
   document.title = t.file.name + ' — Плеєр ХАРА ОМ';
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({ title: t.file.name });
@@ -1145,20 +1158,23 @@ function renderSel() {
 $('btnStart').onclick = () => setSel(audio.currentTime, null);
 $('btnEnd').onclick = () => setSel(null, audio.currentTime);
 
-$('btnSaveClip').onclick = async () => {
-  if (!hasTrack()) return toast('Спочатку відкрийте файл');
+async function newClip(title) {
+  if (!hasTrack()) { toast('Спочатку відкрийте файл'); return null; }
   const s = selStart ?? 0, e = selEnd ?? dur();
-  if (selStart == null && selEnd == null) return toast('Позначте початок [ і кінець ] фрагмента');
-  if (e - s < 0.2) return toast('Фрагмент закороткий');
+  if (selStart == null && selEnd == null) { toast('Позначте початок [ і кінець ] фрагмента'); return null; }
+  if (e - s < 0.2) { toast('Фрагмент закороткий'); return null; }
   const base = tracks[cur].file.name.replace(/\.[^.]+$/, '');
-  const name = await ask('Зберегти фрагмент MP3', fmt(s, true) + ' – ' + fmt(e, true) + '  (' + fmt(e - s) + ')', base + ' ' + (data.clips.length + 1));
-  if (name === null) return;
+  const name = await ask(title, fmt(s, true) + ' – ' + fmt(e, true) + '  (' + fmt(e - s) + ')', base + ' ' + (data.clips.length + 1));
+  if (name === null) return null;
   const clip = { name: name || base + ' ' + (data.clips.length + 1), start: s, end: e };
   data.clips.push(clip);
   save(); renderClips(); renderBar(); renderPlaylist();
   selStart = selEnd = null; renderSel();
-  await exportClip(clip);
-};
+  return clip;
+}
+$('btnSaveClip').onclick = async () => { const c = await newClip('Зберегти фрагмент MP3'); if (c) await exportClip(c); };
+$('btnSaveVid').onclick = async () => { const c = await newClip('Зберегти фрагмент відео'); if (c) await exportVideo(c); };
+$('vidbox').addEventListener('dblclick', () => { const v = audio; (v.requestFullscreen || v.webkitRequestFullscreen || (() => {})).call(v); });
 
 function renderClips() {
   const el = $('clipList');
@@ -1167,14 +1183,15 @@ function renderClips() {
     el.innerHTML = '<div class="empty">Позначте <b>[</b> початок і <b>]</b> кінець (під мітками), потім <b>⬇</b> — фрагмент збережеться окремим MP3 з вашою назвою.</div>';
     return;
   }
+  const vid = isVideo(tracks[cur]);
   el.innerHTML = data.clips.map((c, i) => `
     <div class="item" data-i="${i}">
       <span class="num">${i + 1}.</span>
-      <span class="col"><span class="name" title="${esc(c.name)}">${esc(c.name)}.mp3</span>
+      <span class="col"><span class="name" title="${esc(c.name)}">${esc(c.name)}</span>
       <span class="meta">${fmt(c.start)}–${fmt(c.end)}</span></span>
       <span class="acts">
         <button data-a="play" title="Прослухати фрагмент">▶</button>
-        <button data-a="dl" title="Завантажити MP3 ще раз">⬇</button>
+        <button data-a="dl" title="Зберегти MP3">⬇</button>${vid ? '<button data-a="vid" title="Зберегти відео">🎬</button>' : ''}
         <button data-a="ren" title="Перейменувати">✎</button>
         <button data-a="del" title="Видалити зі списку">✕</button>
       </span>
@@ -1186,6 +1203,7 @@ $('clipList').addEventListener('click', async e => {
   const a = e.target.closest('[data-a]')?.dataset.a;
   if (a === 'play') { seek(c.start); clipStopAt = c.end; audio.play().catch(() => {}); }
   else if (a === 'dl') exportClip(c);
+  else if (a === 'vid') exportVideo(c);
   else if (a === 'ren') {
     const n = await ask('Перейменувати фрагмент', fmt(c.start, true) + ' – ' + fmt(c.end, true), c.name);
     if (n) { c.name = n; save(); renderClips(); renderBar(); }
@@ -1407,6 +1425,55 @@ function toInt16(f32, from, to) {
   }
   return out;
 }
+/* ── фрагмент відео: програється від [ до ] і записується з екрана плеєра ──
+   (MediaRecorder, у реальному часі; MP4, якщо браузер уміє, інакше WebM) */
+async function exportVideo(clip) {
+  if (busy) return toast('Зачекайте, йде збереження…');
+  const v = audio, cap = v.captureStream || v.mozCaptureStream;
+  if (!cap || !window.MediaRecorder) return toast('Цей браузер не вміє записувати відео');
+  busy = true; $('btnSaveVid').disabled = $('btnSaveClip').disabled = true;
+  const rate = v.playbackRate;
+  let stream;
+  try {
+    v.pause(); v.playbackRate = 1; clipStopAt = null;
+    await new Promise(r => { v.addEventListener('seeked', r, { once: true }); v.currentTime = clip.start; setTimeout(r, 3000); });
+    stream = cap.call(v);
+    const mime = ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+      .find(t => MediaRecorder.isTypeSupported(t)) || '';
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 5e6 } : {});
+    const chunks = [];
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    const stopped = new Promise(r => rec.onstop = r);
+    rec.start(1000);
+    await v.play();
+    const len = clip.end - clip.start;
+    const why = await new Promise(res => {
+      const tick = () => {
+        if (v.ended || v.currentTime >= clip.end) return res('done');
+        if (v.paused) return res('paused');
+        progress('Запис відео… ' + fmt(Math.max(0, v.currentTime - clip.start)) + ' / ' + fmt(len) + ' (не перемотуйте)');
+        setTimeout(tick, 200);
+      };
+      tick();
+    });
+    v.pause(); rec.stop(); await stopped;
+    const ext = (rec.mimeType || mime).includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(chunks, { type: rec.mimeType || mime || 'video/webm' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = clip.name.replace(/[\\/:*?"<>|]+/g, '_') + '.' + ext;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    toast((why === 'paused' ? 'Запис зупинено, збережено частину: ' : 'Збережено: ') + a.download);
+  } catch (err) {
+    console.error(err);
+    toast('Не вдалося записати відео: ' + (err && err.message || err));
+  } finally {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    v.playbackRate = rate;
+    busy = false; $('btnSaveVid').disabled = $('btnSaveClip').disabled = false; progress('');
+  }
+}
 async function exportClip(clip) {
   if (busy) return toast('Зачекайте, йде збереження…');
   if (typeof lamejs === 'undefined') return toast('MP3-кодер не завантажився');
@@ -1516,7 +1583,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v37';
+const APP_VER = 'v38';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
