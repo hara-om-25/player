@@ -66,7 +66,8 @@ header .logo { width: 26px; height: 26px; color: var(--accent); flex: none; }
 header h1 { font-size: 17px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 header .now { color: var(--dim); font-weight: 400; }
 header button { padding: 6px 9px; font-size: 13px; }
-header .ver { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+header .ver { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; background: none; border: 1px solid transparent; padding: 6px 8px; }
+header .ver:hover { border-color: var(--surf3); color: var(--text); }
 #btnInstall { display: none; }
 #btnInstall.on { display: inline-block; }
 #dlgInfo ol { margin: 6px 0 0 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
@@ -277,7 +278,7 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   <svg class="logo" viewBox="-39.83 -39.83 79.66 79.66" fill="currentColor" aria-hidden="true"><path d="M2.00 -4.83 L11.00 -13.83 L11.00 -39.83 L2.00 -30.83 Z M-2.00 -4.83 L-11.00 -13.83 L-11.00 -39.83 L-2.00 -30.83 Z M-4.83 -2.00 L-13.83 -11.00 L-39.83 -11.00 L-30.83 -2.00 Z M-4.83 2.00 L-13.83 11.00 L-39.83 11.00 L-30.83 2.00 Z M-2.00 4.83 L-11.00 13.83 L-11.00 39.83 L-2.00 30.83 Z M2.00 4.83 L11.00 13.83 L11.00 39.83 L2.00 30.83 Z M4.83 2.00 L13.83 11.00 L39.83 11.00 L30.83 2.00 Z M4.83 -2.00 L13.83 -11.00 L39.83 -11.00 L30.83 -2.00 Z M26.00 -33.50 L24.15 -28.55 L18.87 -28.32 L23.00 -25.03 L21.59 -19.93 L26.00 -22.85 L30.41 -19.93 L29.00 -25.03 L33.13 -28.32 L27.85 -28.55 Z"/></svg>
   <h1>Плеєр ХАРА ОМ</h1>
   <button id="btnInstall" class="accent" title="Встановити як окремий застосунок">Встановити</button>
-  <span class="ver" id="ver"></span>
+  <button class="ver" id="ver" title="Поділитися посиланням на плеєр"></button>
 </header>
 
 <main>
@@ -1420,8 +1421,28 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v26';
+const APP_VER = 'v27';
 $('ver').textContent = APP_VER;
+// Натиск на версію: посилання на плеєр — у буфер обміну і в системне меню «Поділитися»,
+// щоб переслати його; хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
+const APP_URL = 'https://hara-om-25.github.io/player/';
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; } catch {}
+  try {
+    const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
+  } catch { return false; }
+}
+$('ver').onclick = async () => {
+  const copied = copyText(APP_URL);
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Плеєр ХАРА ОМ', text: 'Плеєр ХАРА ОМ — відкрий посилання в Chrome і натисни «Встановити»', url: APP_URL });
+      return;
+    } catch (e) { if (e && e.name === 'AbortError') { if (await copied) toast('Посилання скопійовано'); return; } }
+  }
+  toast(await copied ? 'Посилання скопійовано: ' + APP_URL : APP_URL);
+};
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
