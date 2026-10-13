@@ -2016,7 +2016,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v54';
+const APP_VER = 'v55';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
@@ -2033,6 +2033,30 @@ $('ver').onclick = async () => {
 };
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Оновлення без перезапуску: при запуску, поверненні до застосунку і раз на 5 хв дивимось,
+  // чи на сайті новіша версія; якщо так — перезавантажуємось (під час відтворення — після паузи).
+  let newVer = null;
+  const applyUpdate = () => {
+    if (!newVer || !audio.paused) return;
+    savePos(); toast('Оновлення до ' + newVer, 700);
+    setTimeout(() => location.reload(), 750);
+  };
+  const checkUpdate = async () => {
+    if (newVer || !navigator.onLine) return;
+    try {
+      const t = await (await fetch('./?u=' + Date.now(), { cache: 'no-store' })).text();
+      const m = t.match(/APP_VER = '(v(\d+))'/);
+      if (m && +m[2] > +APP_VER.slice(1)) {
+        newVer = m[1];
+        const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update().catch(() => {});
+        applyUpdate();
+      }
+    } catch {}
+  };
+  setTimeout(checkUpdate, 3000);
+  setInterval(checkUpdate, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+  audio.addEventListener('pause', applyUpdate);
 }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 // Кнопка «Встановити» видна завжди, поки плеєр відкритий як сторінка браузера.
