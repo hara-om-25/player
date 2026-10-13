@@ -107,7 +107,7 @@ main {
 .panel h2 .hsq.vid { width: 64px; margin-right: 8px; display: none; }
 .panel h2 .hsq.vid.on { display: flex; }
 .vidbox { flex: 1; min-height: 0; background: #0d0e0f; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.vidbox.on { background: #000; }
+.vidbox.on { background: var(--surface); }
 .vidbox > #audio { visibility: hidden; position: absolute; }
 .vidbox.on > #audio { visibility: visible; position: static; }
 .stagelogo { width: 28%; max-width: 180px; color: var(--surf3); }
@@ -151,7 +151,7 @@ main {
 .vidbox { position: relative; }
 .vidbox.on > #audio { width: 100%; height: 100%; object-fit: contain; display: block; }
 /* відтворення назад: кадри малюються сюди поверх відео */
-#revCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: none; background: #000; }
+#revCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: none; background: var(--surface); }
 #revCanvas.on { display: block; }
 /* допоміжне відео, з якого беруться кадри для відтворення назад (має бути на сторінці, але не видно) */
 #revVideo { position: absolute; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
@@ -323,7 +323,7 @@ dialog .line .btns button { flex: 1; padding: 10px 18px; font-size: 17px; }
   .panel.playlist .fragsec { flex: none; }
   .fragsec .list { max-height: 34vh; }
   .panel.stage { max-height: none; }
-  .vidbox { aspect-ratio: 16 / 9; flex: none; }
+  .vidbox { aspect-ratio: var(--vAR, 16 / 9); max-height: 70vh; flex: none; }
   .panel.side { max-height: none; }
   .panel.side .sec { max-height: 34vh; }
   .actions .arow { flex-wrap: wrap; }
@@ -989,6 +989,7 @@ function openTrack(i, autoplay) {
     else if (T0()) audio.currentTime = T0();
     $('btnUntrim').classList.toggle('on', !!T0()); layoutActions();
     if (audio.videoWidth) showVideo(true);
+    requestAnimationFrame(fitVideo);
     renderBar(); updateTime();
     if (autoplay) audio.play().catch(() => {});
   };
@@ -1022,6 +1023,20 @@ function layoutActions() {
   sp.style.height = Math.max(0, Math.ceil(need)) + 'px';
 }
 addEventListener('resize', layoutActions);
+// Відео заповнює екран без чорних смуг: масштабується «під обріз», якщо обрізати
+// доводиться небагато (≤ FIT_CROP з одного боку); інакше вміщується цілим.
+const FIT_CROP = 0.25;
+let fitMode = 'contain';
+function fitVideo() {
+  const vw = audio.videoWidth, vh = audio.videoHeight; if (!vw || !vh) return;
+  document.documentElement.style.setProperty('--vAR', vw + ' / ' + vh);
+  const r = $('vidbox').getBoundingClientRect(); if (!r.width || !r.height) return;
+  const a = vw / vh, b = r.width / r.height, crop = 1 - Math.min(a, b) / Math.max(a, b);
+  fitMode = crop <= FIT_CROP ? 'cover' : 'contain';
+  audio.style.objectFit = fitMode; $('revCanvas').style.objectFit = fitMode;
+}
+addEventListener('resize', fitVideo);
+document.addEventListener('fullscreenchange', () => setTimeout(fitVideo, 50));
 document.fonts && document.fonts.ready.then(layoutActions);
 setTimeout(layoutActions, 300);
 document.querySelectorAll('[data-last]').forEach(b => b.onclick = () => {
@@ -1227,12 +1242,12 @@ const Rev = (() => {
     const g = gen;
     cursor = audio.currentTime; lastTs = 0;
     const box = $('vidbox').getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
-    const vw = audio.videoWidth, vh = audio.videoHeight, k = Math.min(box.width * dpr / vw, box.height * dpr / vh, 1);
+    const vw = audio.videoWidth, vh = audio.videoHeight, k = Math.min(Math.max(box.width * dpr / vw, box.height * dpr / vh), 1);
     W = Math.max(2, Math.round(vw * k)); H = Math.max(2, Math.round(vh * k));
     cv.width = W; cv.height = H; ctx = cv.getContext('2d');
     // поточний кадр одразу на полотно, щоб не блимало
     try { ctx.drawImage(audio, 0, 0, W, H); } catch {}
-    cv.style.objectFit = 'contain'; cv.classList.add('on');
+    cv.style.objectFit = fitMode; cv.classList.add('on');
     audio.pause();
     chunks = [];
     const c = await capture(Math.max(T0(), cursor - CH), cursor, g);
@@ -1891,7 +1906,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveP
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v49';
+const APP_VER = 'v50';
 $('ver').textContent = APP_VER;
 // Натиск на версію: посилання на плеєр — у буфер обміну, щоб переслати його;
 // хто відкриє посилання, той встановить плеєр кнопкою «Встановити»
