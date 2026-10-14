@@ -25,9 +25,10 @@ APPS = [
          feat=dict(id='video', video=True, clips=False, trim=True, last=True, vslider=True,
                    db='markplayer-video', session='session.video')),
     dict(id='video-editor', glyph='editor', name='Відеоредактор ХАРА ОМ', short='Відеоредактор',
-         desc='Відеоредактор: мітки, обрізка, фрагменти у відео та MP3',
+         desc='Відеоредактор (поки — точна копія відеоплеєра; далі стане справжнім редактором)',
          mime='video/*', exts=VIDEO_EXTS,
-         feat=dict(id='editor', video=True, clips=True, trim=True, last=True,
+         # стартує як точна копія відеоплеєра — ті самі можливості, свій плейлист
+         feat=dict(id='editor', video=True, clips=False, trim=True, last=True, vslider=True,
                    db='markplayer-editor', session='session.editor')),
 ]
 
