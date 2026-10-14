@@ -22,7 +22,7 @@ APPS = [
     dict(id='video-player', glyph='video', name='Відеоплеєр ХАРА ОМ', short='Відеоплеєр',
          desc='Відеоплеєр з мітками, покадровою прокруткою та регулятором',
          mime='video/*', exts=VIDEO_EXTS,
-         feat=dict(id='video', video=True, clips=False, trim=False, last=True, vslider=True,
+         feat=dict(id='video', video=True, clips=False, trim=True, last=True, vslider=True,
                    db='markplayer-video', session='session.video')),
     dict(id='video-editor', glyph='editor', name='Відеоредактор ХАРА ОМ', short='Відеоредактор',
          desc='Відеоредактор: мітки, обрізка, фрагменти у відео та MP3',
