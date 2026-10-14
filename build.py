@@ -22,7 +22,7 @@ APPS = [
     dict(id='video-player', glyph='video', name='Відеоплеєр ХАРА ОМ', short='Відеоплеєр',
          desc='Відеоплеєр з мітками, покадровою прокруткою та регулятором',
          mime='video/*', exts=VIDEO_EXTS,
-         feat=dict(id='video', video=True, clips=False, trim=False, last=True,
+         feat=dict(id='video', video=True, clips=False, trim=False, last=True, vslider=True,
                    db='markplayer-video', session='session.video')),
     dict(id='video-editor', glyph='editor', name='Відеоредактор ХАРА ОМ', short='Відеоредактор',
          desc='Відеоредактор: мітки, обрізка, фрагменти у відео та MP3',
@@ -41,7 +41,7 @@ def build(app, out):
     html, sw, man = read('src/app.html'), read('src/sw.js'), read('src/manifest.webmanifest')
     ver = re.search(r"APP_VER = '(v\d+)'", html).group(1)
     f = app['feat']
-    body = ' '.join('f-' + k for k in ('video', 'clips', 'trim', 'last') if f[k]) + ' app-' + f['id']
+    body = ' '.join('f-' + k for k in ('video', 'clips', 'trim', 'last', 'vslider') if f.get(k)) + ' app-' + f['id']
     accept = ','.join([app['mime']] + app['exts'])
     for k, v in {'__NAME__': app['name'], '__SHORT__': app['short'], '__ACCEPT__': accept, '__BODYCLASS__': body,
                  '__FEAT__': json.dumps(f, ensure_ascii=False), '__URL__': BASE + app['id'] + '/'}.items():
