@@ -28,7 +28,7 @@ APPS = [
          desc='Відеоредактор (поки — точна копія відеоплеєра; далі стане справжнім редактором)',
          mime='video/*', exts=VIDEO_EXTS,
          # стартує як точна копія відеоплеєра — ті самі можливості, свій плейлист
-         feat=dict(id='editor', video=True, clips=False, trim=True, last=True, vslider=True,
+         feat=dict(id='editor', video=True, clips=False, trim=True, last=True, vslider=True, edit=True,
                    db='markplayer-editor', session='session.editor')),
 ]
 
@@ -42,7 +42,7 @@ def build(app, out):
     html, sw, man = read('src/app.html'), read('src/sw.js'), read('src/manifest.webmanifest')
     ver = re.search(r"APP_VER = '(v\d+)'", html).group(1)
     f = app['feat']
-    body = ' '.join('f-' + k for k in ('video', 'clips', 'trim', 'last', 'vslider') if f.get(k)) + ' app-' + f['id']
+    body = ' '.join('f-' + k for k in ('video', 'clips', 'trim', 'last', 'vslider', 'edit') if f.get(k)) + ' app-' + f['id']
     accept = ','.join([app['mime']] + app['exts'])
     for k, v in {'__NAME__': app['name'], '__SHORT__': app['short'], '__ACCEPT__': accept, '__BODYCLASS__': body,
                  '__FEAT__': json.dumps(f, ensure_ascii=False), '__URL__': BASE + app['id'] + '/'}.items():
