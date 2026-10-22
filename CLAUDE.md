@@ -12,7 +12,7 @@
   об'єкт `FEAT` (`video`, `clips`, `trim`, `last`, `vslider`, `db`, `session`) і класи `f-…` на `<body>` (CSS ховає зайве).
   Плейсхолдери `__NAME__`, `__SHORT__`, `__ACCEPT__`, `__FEAT__`, `__URL__`, `__BODYCLASS__` підставляє `build.py`.
   **`APP_VER` піднімати з кожною зміною** (одна версія на всі три; видно в правому верхньому куті).
-- `src/sw.js`, `src/manifest.webmanifest` — шаблони (CACHE = `<репозиторій>-<APP_VER>` рахується сам).
+- `src/sw.js`, `src/manifest.webmanifest` — шаблони (CACHE = `<репозиторій>-<APP_VER>` рахується сам). Офлайн (з v116): sw — спершу кеш (застосунок відкривається без інтернету й не чекає поганої мережі); `install` бере файли з `cache: 'reload'`; запити з `?u=` (перевірка `checkUpdate`) — лише мережа. Нова версія: `checkUpdate` бачить новіший `APP_VER` → `reg.update()` → новий CACHE → перезавантаження. Меню `/player/sw.js` — мережа до 2,5 с, інакше кеш.
 - `python3 build.py` — збирає три застосунки в `../audio-player`, `../video-player`, `../video-editor`
   (клони цих репозиторіїв поруч; без них — у `dist/`). Потім у кожному: commit і push у `main` та `gh-pages`.
   Ці три репозиторії вручну не правити — лише через `src/` і `build.py`.
