@@ -51,6 +51,9 @@ def build(app, out):
     man = json.loads(man)
     man.update(name=app['name'], short_name=app['short'], description=app['desc'])
     man['file_handlers'][0]['accept'] = {app['mime']: app['exts']}
+    # «Поділитися» з галереї / файлового менеджера Android → файл одразу в плейлист (обробляє sw.js)
+    man['share_target'] = {'action': './?share-target', 'method': 'POST', 'enctype': 'multipart/form-data',
+                           'params': {'files': [{'name': 'media', 'accept': [app['mime']] + app['exts']}]}}
     leftover = re.findall(r'__[A-Z]+__', html + sw)
     assert not leftover, leftover
     os.makedirs(out, exist_ok=True)
