@@ -28,7 +28,7 @@ APPS = [
          desc='Відеоредактор (поки — точна копія відеоплеєра; далі стане справжнім редактором)',
          mime='video/*', exts=VIDEO_EXTS,
          # стартує як точна копія відеоплеєра — ті самі можливості, свій плейлист
-         feat=dict(id='editor', video=True, clips=False, trim=True, last=True, vslider=True, edit=True, draw=True, hdrpl=True, vspd=True,
+         feat=dict(id='editor', video=True, clips=False, trim=True, last=True, vslider=True, edit=True, draw=True, ai=True, hdrpl=True, vspd=True,
                    db='markplayer-editor', session='session.editor')),
 ]
 
@@ -42,7 +42,7 @@ def build(app, out):
     html, sw, man = read('src/app.html'), read('src/sw.js'), read('src/manifest.webmanifest')
     ver = re.search(r"APP_VER = '(v\d+)'", html).group(1)
     f = app['feat']
-    body = ' '.join('f-' + k for k in ('video', 'clips', 'trim', 'last', 'vslider', 'edit', 'draw', 'hdrpl', 'vspd') if f.get(k)) + ' app-' + f['id']
+    body = ' '.join('f-' + k for k in ('video', 'clips', 'trim', 'last', 'vslider', 'edit', 'draw', 'ai', 'hdrpl', 'vspd') if f.get(k)) + ' app-' + f['id']
     accept = ','.join([app['mime']] + app['exts'])
     for k, v in {'__NAME__': app['name'], '__SHORT__': app['short'], '__ACCEPT__': accept, '__BODYCLASS__': body,
                  '__FEAT__': json.dumps(f, ensure_ascii=False), '__URL__': BASE + app['id'] + '/'}.items():
@@ -68,6 +68,8 @@ def build(app, out):
     # іконки: логотип, довкола зірки — смуги / око / кадр плівки
     subprocess.run([sys.executable, os.path.join(ROOT, 'logo.py'), 'png', out, app['glyph']], check=True)
     shutil.copytree(os.path.join(ROOT, 'fonts'), os.path.join(out, 'fonts'), dirs_exist_ok=True)
+    if f.get('ai'):                          # нейромережа для обробки 🎯 (TF.js + CenterNet)
+        shutil.copytree(os.path.join(ROOT, 'ai'), os.path.join(out, 'ai'), dirs_exist_ok=True)
     os.makedirs(os.path.join(ROOT, 'apps'), exist_ok=True)       # іконка — і для сторінки-меню /player/
     shutil.copy(os.path.join(out, 'icon-192.png'), os.path.join(ROOT, 'apps', app['id'] + '.png'))
     print(f"{app['id']:14} {ver} → {out}")

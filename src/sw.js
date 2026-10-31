@@ -15,7 +15,8 @@ self.addEventListener('activate', e => {
     Promise.all(keys.filter(k => k.startsWith('__ID__-') && k !== CACHE).map(k => caches.delete(k)))
   ).then(() => self.clients.claim()));
 });
-const INBOX = 'share-__ID__';     // не з префіксом CACHE — інакше activate її стер би
+const INBOX = 'share-__ID__';
+const AICACHE = 'ai1-__ID__';   // ai1 — змінити, коли зміняться файли в ai/     // не з префіксом CACHE — інакше activate її стер би
 self.addEventListener('fetch', e => {
   const req = e.request;
   // «Поділитися» → файли кладемо у вхідні й відкриваємо застосунок; сторінка забере їх у плейлист
@@ -36,6 +37,17 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin || url.searchParams.has('u')) return;   // перевірка оновлення — повз кеш
+  // нейромережа відеоредактора (ai/, ~6 МБ) — в окремому кеші, який нова версія не стирає
+  if (url.pathname.includes('/ai/')) {
+    e.respondWith((async () => {
+      const box = await caches.open(AICACHE), hit = await box.match(req, { ignoreSearch: true });
+      if (hit) return hit;
+      const resp = await fetch(req);
+      if (resp && resp.ok) await box.put(req, resp.clone());
+      return resp;
+    })());
+    return;
+  }
   e.respondWith((async () => {
     const nav = req.mode === 'navigate';
     const hit = await caches.match(req, { ignoreSearch: true }) || (nav && (await caches.match('./') || await caches.match('./index.html')));

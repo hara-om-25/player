@@ -1,0 +1,2 @@
+TensorFlow.js 4.22.0 (tf.min.js, tf-backend-wasm.min.js, *.wasm) — Apache License 2.0, https://github.com/tensorflow/tfjs
+CenterNet (MobileNetV3) model centernet.json/.bin — from @vladmandic/human-models 3.0.4, MIT License (see LICENSE-human-models.txt), based on https://github.com/610265158/mobilenetv3_centernet
