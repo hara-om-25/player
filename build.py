@@ -17,7 +17,7 @@ APPS = [
          desc='Аудіоплеєр з мітками та збереженням фрагментів у MP3',
          mime='audio/*', exts=AUDIO_EXTS,
          # db/session — як у старому плеєрі, щоб відкритий там плейлист перейшов сюди
-         feat=dict(id='audio', video=False, clips=True, trim=False, last=False, hdrpl=True, vspd=True,
+         feat=dict(id='audio', video=False, clips=True, trim=False, last=False, hdrpl=True, vspd=True, wave=True,
                    db='markplayer', session='session')),
     dict(id='video-player', glyph='video', name='Відеоплеєр ХАРА ОМ', short='Відеоплеєр',
          desc='Відеоплеєр з мітками, покадровою прокруткою та регулятором',
@@ -42,7 +42,7 @@ def build(app, out):
     html, sw, man = read('src/app.html'), read('src/sw.js'), read('src/manifest.webmanifest')
     ver = re.search(r"APP_VER = '(v\d+)'", html).group(1)
     f = app['feat']
-    body = ' '.join('f-' + k for k in ('video', 'clips', 'trim', 'last', 'vslider', 'edit', 'draw', 'ai', 'hdrpl', 'vspd') if f.get(k)) + ' app-' + f['id']
+    body = ' '.join('f-' + k for k in ('video', 'clips', 'trim', 'last', 'vslider', 'edit', 'draw', 'ai', 'hdrpl', 'vspd', 'wave') if f.get(k)) + ' app-' + f['id']
     accept = ','.join([app['mime']] + app['exts'])
     for k, v in {'__NAME__': app['name'], '__SHORT__': app['short'], '__ACCEPT__': accept, '__BODYCLASS__': body,
                  '__FEAT__': json.dumps(f, ensure_ascii=False), '__URL__': BASE + app['id'] + '/'}.items():
