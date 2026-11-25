@@ -70,6 +70,8 @@ def build(app, out):
     shutil.copytree(os.path.join(ROOT, 'fonts'), os.path.join(out, 'fonts'), dirs_exist_ok=True)
     if f.get('ai'):                          # нейромережа для обробки 🎯 (TF.js + CenterNet)
         shutil.copytree(os.path.join(ROOT, 'ai'), os.path.join(out, 'ai'), dirs_exist_ok=True)
+    if f.get('wave'):                        # розпізнавання мови в нотатки (transformers.js + Whisper, v223)
+        shutil.copytree(os.path.join(ROOT, 'asr'), os.path.join(out, 'asr'), dirs_exist_ok=True)
     os.makedirs(os.path.join(ROOT, 'apps'), exist_ok=True)       # іконка — і для сторінки-меню /player/
     shutil.copy(os.path.join(out, 'icon-192.png'), os.path.join(ROOT, 'apps', app['id'] + '.png'))
     print(f"{app['id']:14} {ver} → {out}")

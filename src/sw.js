@@ -16,7 +16,8 @@ self.addEventListener('activate', e => {
   ).then(() => self.clients.claim()));
 });
 const INBOX = 'share-__ID__';
-const AICACHE = 'ai1-__ID__';   // ai1 — змінити, коли зміняться файли в ai/     // не з префіксом CACHE — інакше activate її стер би
+const AICACHE = 'ai1-__ID__';
+const ASRCACHE = 'asr1-__ID__';   // asr1 — змінити, коли зміняться файли в asr/   // ai1 — змінити, коли зміняться файли в ai/     // не з префіксом CACHE — інакше activate її стер би
 self.addEventListener('fetch', e => {
   const req = e.request;
   // «Поділитися» → файли кладемо у вхідні й відкриваємо застосунок; сторінка забере їх у плейлист
@@ -38,9 +39,9 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin !== location.origin || url.searchParams.has('u')) return;   // перевірка оновлення — повз кеш
   // нейромережа відеоредактора (ai/, ~6 МБ) — в окремому кеші, який нова версія не стирає
-  if (url.pathname.includes('/ai/')) {
+  if (url.pathname.includes('/ai/') || url.pathname.includes('/asr/')) {   // asr/ — розпізнавання мови аудіоплеєра (з v223)
     e.respondWith((async () => {
-      const box = await caches.open(AICACHE), hit = await box.match(req, { ignoreSearch: true });
+      const box = await caches.open(url.pathname.includes('/asr/') ? ASRCACHE : AICACHE), hit = await box.match(req, { ignoreSearch: true });
       if (hit) return hit;
       const resp = await fetch(req);
       if (resp && resp.ok) await box.put(req, resp.clone());
