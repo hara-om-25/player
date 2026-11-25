@@ -56,8 +56,10 @@ async function load(name) {
   return loading;
 }
 
-self.onmessage = async e => {
-  const { id, cmd, audio, model } = e.data;
+// v229: завдання — строго по черзі (раніше нове розпізнавання йшло паралельно з незакінченим і вішало відеокарту)
+let chain = Promise.resolve();
+self.onmessage = e => { chain = chain.then(() => handle(e.data)); };
+async function handle({ id, cmd, audio, model }) {
   try {
     await load(model);
     if (cmd === 'load') return postMessage({ id, type: 'ready', dev });
@@ -68,4 +70,4 @@ self.onmessage = async e => {
   } catch (err) {
     postMessage({ id, type: 'error', msg: String((err && err.message) || err) });
   }
-};
+}

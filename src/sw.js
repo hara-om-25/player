@@ -17,7 +17,7 @@ self.addEventListener('activate', e => {
 });
 const INBOX = 'share-__ID__';
 const AICACHE = 'ai1-__ID__';   // ai1 — змінити, коли зміняться файли в ai/   (не з префіксом CACHE — інакше activate її стер би)
-const ASRCACHE = 'asr4-__ID__';  // asr4 — змінити, коли зміняться файли в asr/ (розпізнавання мови аудіоплеєра)
+const ASRCACHE = 'asr5-__ID__';  // asr5 — змінити, коли зміняться файли в asr/ (розпізнавання мови аудіоплеєра)
 self.addEventListener('fetch', e => {
   const req = e.request;
   // «Поділитися» → файли кладемо у вхідні й відкриваємо застосунок; сторінка забере їх у плейлист
