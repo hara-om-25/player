@@ -15,6 +15,10 @@ const MODELS = {
   turbo: { id: 'onnx-community/whisper-large-v3-turbo',
     gpu: f16 => ({ encoder_model: f16 ? 'q4f16' : 'q4', decoder_model_merged: f16 ? 'q4f16' : 'q4' }),
     cpu: { encoder_model: 'q4', decoder_model_merged: 'q4' } },
+  // v225: найбільша — Whisper large-v3 (32 шари декодера), стиснена: q4f16 ≈ 930 МБ, без shader-f16 / без відеокарти — q4 ≈ 1,2 ГБ
+  large: { id: 'onnx-community/whisper-large-v3-ONNX',
+    gpu: f16 => ({ encoder_model: f16 ? 'q4f16' : 'q4', decoder_model_merged: f16 ? 'q4f16' : 'q4' }),
+    cpu: { encoder_model: 'q4', decoder_model_merged: 'q4' } },
   small: { id: 'onnx-community/whisper-small',
     gpu: f16 => ({ encoder_model: f16 ? 'fp16' : 'fp32', decoder_model_merged: 'q4' }),
     cpu: { encoder_model: 'q8', decoder_model_merged: 'q8' } },
