@@ -3,7 +3,7 @@
 // і тримає в кеші «transformers-cache» — далі працює без інтернету.
 // Повідомлення: {id, cmd:'load'} → {type:'ready', dev}; {id, cmd:'run', audio: Float32Array 16 кГц моно} → {type:'done', text};
 // під час завантаження моделі — {type:'load', p} (подія progress_callback); помилка — {type:'error', msg}.
-import { pipeline, env, WhisperTextStreamer } from './transformers.min.js';
+import { pipeline, env, WhisperTextStreamer, Tensor } from './transformers.min.js';
 
 env.allowLocalModels = false;
 env.useBrowserCache = true;
@@ -56,17 +56,46 @@ async function load(name) {
   return loading;
 }
 
+// v230: писати як чути, без перекладу. Якщо мову не задати, transformers.js ставить англійську, а з «ukrainian»
+// Whisper перекладав російську мову на українську. Тому на кожен шматок (≤ 30 с): енкодер — один раз, далі модель
+// одним токеном каже мову (після <|startoftranscript|>), і текст пишеться тією мовою (російська — російською,
+// українська й суржик — як українська; інші — як українська). Не вийшло — далі як раніше, лише українська.
+let plainOnly = false;
+async function asIs(audio, streamer) {
+  const M = asr.model, gc = M.generation_config;
+  const { input_features } = await asr.processor(audio);
+  const mi = await M._prepare_encoder_decoder_kwargs_for_generation({ inputs_tensor: input_features, model_inputs: { input_features }, model_input_name: 'input_features', generation_config: gc });
+  const enc = mi.encoder_outputs;
+  // мова — з виходу декодера одразу після <|startoftranscript|>: що ймовірніше, <|ru|> чи <|uk|>
+  // (generate тут не годиться — його фільтри замість мови дають службовий токен)
+  const o = await M({ input_features, encoder_outputs: enc, decoder_input_ids: new Tensor('int64', BigInt64Array.from([BigInt(gc.decoder_start_token_id)]), [1, 1]) });
+  const lg = o.logits.data, V = o.logits.dims.at(-1), base = lg.length - V;
+  const lang = lg[base + gc.lang_to_id['<|ru|>']] > lg[base + gc.lang_to_id['<|uk|>']] ? 'russian' : 'ukrainian';
+  try { for (const k in o) if (k !== 'logits' && o[k] && o[k].dispose) o[k].dispose(); if (o.past_key_values) for (const t of Object.values(o.past_key_values)) t && t.dispose && t.dispose(); } catch (e) {}
+  const out = await M.generate({ inputs: input_features, encoder_outputs: enc, language: lang, task: 'transcribe', streamer });
+  const text = asr.tokenizer.batch_decode(out.sequences || out, { skip_special_tokens: true })[0] || '';
+  return { text, lang };
+}
+
 // v229: завдання — строго по черзі (раніше нове розпізнавання йшло паралельно з незакінченим і вішало відеокарту)
 let chain = Promise.resolve();
 self.onmessage = e => { chain = chain.then(() => handle(e.data)); };
-async function handle({ id, cmd, audio, model }) {
+async function handle({ id, cmd, audio, model, mode }) {
   try {
     await load(model);
     if (cmd === 'load') return postMessage({ id, type: 'ready', dev });
     // v228: слова — одразу, як модель їх видає (видно, що робота йде)
     const streamer = new WhisperTextStreamer(asr.tokenizer, { skip_prompt: true, callback_function: t => postMessage({ id, type: 'tok', t }) });
-    const r = await asr(audio, { language: 'ukrainian', task: 'transcribe', chunk_length_s: 30, stride_length_s: 4, streamer });
-    postMessage({ id, type: 'done', text: (Array.isArray(r) ? r.map(x => x.text).join(' ') : r.text) || '', dev });
+    let text = null, lang = 'ukrainian';
+    if (!plainOnly && mode !== 'uk') {   // mode 'uk' (⚙ «завжди українською») — як раніше
+      try { ({ text, lang } = await asIs(audio, streamer)); }
+      catch (err) { console.warn('ASR: визначення мови не вдалося, далі — лише українська', err); plainOnly = true; }
+    }
+    if (text == null) {
+      const r = await asr(audio, { language: 'ukrainian', task: 'transcribe', chunk_length_s: 30, stride_length_s: 4, streamer });
+      text = (Array.isArray(r) ? r.map(x => x.text).join(' ') : r.text) || '';
+    }
+    postMessage({ id, type: 'done', text, lang, dev });
   } catch (err) {
     postMessage({ id, type: 'error', msg: String((err && err.message) || err) });
   }
