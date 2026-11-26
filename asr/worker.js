@@ -3,7 +3,7 @@
 // і тримає в кеші «transformers-cache» — далі працює без інтернету.
 // Повідомлення: {id, cmd:'load'} → {type:'ready', dev}; {id, cmd:'run', audio: Float32Array 16 кГц моно} → {type:'done', text};
 // під час завантаження моделі — {type:'load', p} (подія progress_callback); помилка — {type:'error', msg}.
-import { pipeline, env, WhisperTextStreamer, Tensor } from './transformers.min.js';
+import { pipeline, env, WhisperTextStreamer, Tensor, AutoModelForCTC } from './transformers.min.js';
 
 env.allowLocalModels = false;
 env.useBrowserCache = true;
@@ -22,7 +22,43 @@ const MODELS = {
   small: { id: 'onnx-community/whisper-small',
     gpu: f16 => ({ encoder_model: f16 ? 'fp16' : 'fp32', decoder_model_merged: 'q4' }),
     cpu: { encoder_model: 'q8', decoder_model_merged: 'q8' }, cpuOk: true },
+  // v231: «як чути» — wav2vec2-xlsr-53 для української (anton-l, Apache-2.0; ONNX — XDcobra), CTC: пише літерами почуте,
+  // не знає мов і не перекладає; без розділових знаків і великих літер. fp16 ≈ 600 МБ (відеокарта), int8 ≈ 340 МБ (процесор).
+  // tokenizer.json у пакеті немає — тому не pipeline: модель сама, а літери — зі словника vocab.json (жадібний CTC).
+  ctc: { id: 'XDcobra/wav2vec2-large-xlsr-53-ukrainian-ONNX', ctc: true,
+    gpu: f16 => (f16 ? 'fp16' : null), cpu: 'int8', cpuOk: true },
 };
+// vocab.json — через той самий кеш «transformers-cache», щоб працювало й без інтернету
+async function hubJSON(id, file) {
+  const url = env.allowLocalModels && !env.allowRemoteModels ? env.localModelPath + id + '/' + file : env.remoteHost.replace(/\/$/, '') + '/' + env.remotePathTemplate.replace('{model}', id).replace('{revision}', 'main') + file;
+  let c = null; try { c = await caches.open('transformers-cache'); } catch (e) {}
+  let r = c && await c.match(url);
+  if (!r) { r = await fetch(url); if (!r.ok) throw new Error(file + ': ' + r.status); if (c) await c.put(url, r.clone()); }
+  return r.json();
+}
+async function loadCtc(M, t) {
+  const model = await AutoModelForCTC.from_pretrained(M.id, { device: t.device, dtype: t.dtype, progress_callback: p => postMessage({ type: 'load', p }) });
+  const vocab = await hubJSON(M.id, 'vocab.json'), chars = [];
+  for (const [k, v] of Object.entries(vocab)) chars[v] = k;
+  return { ctc: true, model, chars, pad: vocab['[PAD]'], dispose: () => model.dispose() };
+}
+// звук (16 кГц) → літери: нормалізація як у Wav2Vec2FeatureExtractor, найімовірніша літера на кадр, повтори й [PAD] — геть, «|» — пробіл
+async function runCtc(audio) {
+  let m = 0; for (const v of audio) m += v; m /= audio.length || 1;
+  let s = 0; for (const v of audio) s += (v - m) * (v - m); s = Math.sqrt(s / (audio.length || 1) + 1e-7);
+  const x = new Float32Array(audio.length); for (let i = 0; i < x.length; i++) x[i] = (audio[i] - m) / s;
+  const n = x.length;
+  const o = await asr.model({ input_values: new Tensor('float32', x, [1, n]), attention_mask: new Tensor('int64', new BigInt64Array(n).fill(1n), [1, n]) });
+  const lg = o.logits, [, T, V] = lg.dims, d = lg.data;
+  let out = '', prev = -1;
+  for (let t = 0; t < T; t++) {
+    let b = 0, bv = -Infinity; for (let v = 0; v < V; v++) { const z = d[t * V + v]; if (z > bv) { bv = z; b = v; } }
+    if (b !== prev && b !== asr.pad) { const ch = asr.chars[b] || ''; if (!/^\[|^<\/?s>$/.test(ch)) out += ch === '|' ? ' ' : ch; }
+    prev = b;
+  }
+  try { lg.dispose && lg.dispose(); } catch (e) {}
+  return out.replace(/\s+/g, ' ').trim();
+}
 let asr = null, dev = '', loading = null, cur = '';
 
 async function load(name) {
@@ -38,14 +74,14 @@ async function load(name) {
     let gpu = false, f16 = false;
     try { const a = navigator.gpu && await navigator.gpu.requestAdapter(); gpu = !!a; f16 = !!(a && a.features.has('shader-f16')); } catch (e) {}
     const tries = [];
-    if (gpu) tries.push({ device: 'webgpu', dtype: M.gpu(f16) });
+    if (gpu && M.gpu(f16)) tries.push({ device: 'webgpu', dtype: M.gpu(f16) });
     // v228: великі моделі на процесорі працюють годинами (виглядало як вічні «0%») — для них лише відеокарта
     if (!gpu || M.cpuOk) tries.push({ device: 'wasm', dtype: M.cpu });
     if (!tries.length) throw new Error('потрібна відеокарта (WebGPU), а браузер її не дає — оберіть у ⚙ Whisper small');
     let last;
     for (const t of tries) {
       try {
-        asr = await pipeline('automatic-speech-recognition', M.id, { ...t, progress_callback: p => postMessage({ type: 'load', p }) });
+        asr = M.ctc ? await loadCtc(M, t) : await pipeline('automatic-speech-recognition', M.id, { ...t, progress_callback: p => postMessage({ type: 'load', p }) });
         dev = t.device; return asr;
       } catch (e) { last = e; console.warn('ASR', t.device, e); }
     }
@@ -84,6 +120,7 @@ async function handle({ id, cmd, audio, model, mode }) {
   try {
     await load(model);
     if (cmd === 'load') return postMessage({ id, type: 'ready', dev });
+    if (asr.ctc) { const text = await runCtc(audio); postMessage({ id, type: 'tok', t: text }); return postMessage({ id, type: 'done', text, lang: '', dev }); }
     // v228: слова — одразу, як модель їх видає (видно, що робота йде)
     const streamer = new WhisperTextStreamer(asr.tokenizer, { skip_prompt: true, callback_function: t => postMessage({ id, type: 'tok', t }) });
     let text = null, lang = 'ukrainian';
