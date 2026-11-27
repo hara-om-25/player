@@ -64,6 +64,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 // закрите вікно чи перезапуск не гублять завантаженого: наступного разу качаються лише відсутні частини
 async function prefetch(id, files) {
   const c = modelCache;   // v251: файли й частини — в IndexedDB «asr-models»
+  const phase = text => postMessage({ type: 'load', p: { status: 'phase', text } });   // v252: що зараз робиться
+  phase('дізнаюсь розмір моделі…');
   const sizes = await fileSizes(id), CH = 16 << 20;
   for (const f of files) {
     const url = fileURL(id, f), total = sizes[f];
@@ -78,12 +80,18 @@ async function prefetch(id, files) {
       if (hit) { b = hit.blob; if (!b || b.size !== len) b = null; else resumed += len; }
       for (let a = 0; !b && a < 8; a++) {
         try {
+          if (i === 0 && !resumed) phase('з\'єднуюсь із сервером моделей…');
           const r = await fetch(url, { headers: { Range: 'bytes=' + from + '-' + end } });
-          if (r.status === 200 && N === 1) b = await r.blob();
-          else {
-            if (r.status !== 206) throw new Error('немає частин (' + r.status + ')');
-            b = await r.blob(); if (b.size !== len) { b = null; throw new Error('обірвано'); }
+          if (!(r.status === 200 && N === 1) && r.status !== 206) throw new Error('немає частин (' + r.status + ')');
+          // v252: читаємо потоком — хід видно кожен мегабайт, а не раз на 16 МБ
+          const rd = r.body.getReader(), bufs = []; let got2 = 0, last = 0;
+          for (;;) {
+            const { done, value } = await rd.read(); if (done) break;
+            bufs.push(value); got2 += value.length;
+            if (got2 - last > (1 << 20)) { last = got2; postMessage({ type: 'load', p: { status: 'progress', file: f, loaded: from + got2, total, resumed } }); }
           }
+          b = new Blob(bufs);
+          if (b.size !== len) { b = null; throw new Error('обірвано'); }
           await MDB.put('parts', pkey(i), { blob: b, size: len });
         } catch (e) {
           if (/немає частин/.test(e.message)) return;      // сервер не віддає частинами — хай качає бібліотека
@@ -94,6 +102,7 @@ async function prefetch(id, files) {
       parts.push(b); got = end + 1;
       postMessage({ type: 'load', p: { status: 'progress', file: f, loaded: got, total, resumed } });
     }
+    phase('записую модель на планшет…');
     await c.put(url, new Response(new Blob(parts), { headers: { 'Content-Length': String(total), 'Content-Type': 'application/octet-stream' } }));
     for (let i = 0; i < N; i++) await MDB.del('parts', pkey(i)).catch(() => {});   // файл цілий — частини більше не потрібні
   }
@@ -152,6 +161,7 @@ async function load(name) {
       try {
         try { await prefetch(M.id, modelFiles(M, t.dtype)); }
         catch (e) { if (/зв'язок рветься/.test(e.message)) { loading = null; throw e; } console.warn('prefetch', e); }
+        postMessage({ type: 'load', p: { status: 'phase', text: 'запускаю модель…' } });
         asr = M.ctc ? await loadCtc(M, t) : await pipeline('automatic-speech-recognition', M.id, { ...t, progress_callback: p => postMessage({ type: 'load', p }) });
         dev = t.device; return asr;
       } catch (e) { last = e; console.warn('ASR', t.device, e); }
