@@ -47,34 +47,42 @@ async function fileSizes(id) {
   } catch (e) { return {}; }
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// v246: кожна скачана частина одразу лежить у кеші «asr-parts» (адреса файлу + ?__part=i&n=розмір) — обрив, «Зупинити»,
+// закрите вікно чи перезапуск не гублять завантаженого: наступного разу качаються лише відсутні частини
 async function prefetch(id, files) {
-  let c; try { c = await caches.open('transformers-cache'); } catch (e) { return; }
+  let c, pc; try { c = await caches.open('transformers-cache'); pc = await caches.open('asr-parts'); } catch (e) { return; }
   const sizes = await fileSizes(id), CH = 16 << 20;
   for (const f of files) {
     const url = fileURL(id, f), total = sizes[f];
     if (await c.match(url)) continue;
     if (!total) continue;                                   // розміру не знаємо — нехай качає бібліотека
-    const parts = []; let got = 0;
-    while (got < total) {
-      const end = Math.min(total, got + CH) - 1;
-      let ok = false;
-      for (let a = 0; a < 8 && !ok; a++) {
+    const N = Math.ceil(total / CH), pkey = i => url + '?__part=' + i + '&n=' + total;
+    const parts = []; let got = 0, resumed = 0;
+    for (let i = 0; i < N; i++) {
+      const from = i * CH, end = Math.min(total, from + CH) - 1, len = end - from + 1;
+      let b = null;
+      const hit = await pc.match(pkey(i));
+      if (hit) { b = await hit.blob(); if (b.size !== len) b = null; else resumed += len; }
+      for (let a = 0; !b && a < 8; a++) {
         try {
-          const r = await fetch(url, { headers: { Range: 'bytes=' + got + '-' + end } });
-          if (r.status === 200 && got === 0 && end === total - 1) { parts.push(await r.blob()); ok = true; break; }
-          if (r.status !== 206) throw new Error('немає частин (' + r.status + ')');
-          const b = await r.blob(); if (b.size !== end - got + 1) throw new Error('обірвано');
-          parts.push(b); ok = true;
+          const r = await fetch(url, { headers: { Range: 'bytes=' + from + '-' + end } });
+          if (r.status === 200 && N === 1) b = await r.blob();
+          else {
+            if (r.status !== 206) throw new Error('немає частин (' + r.status + ')');
+            b = await r.blob(); if (b.size !== len) { b = null; throw new Error('обірвано'); }
+          }
+          await pc.put(pkey(i), new Response(b, { headers: { 'Content-Length': String(len) } }));
         } catch (e) {
           if (/немає частин/.test(e.message)) return;      // сервер не віддає частинами — хай качає бібліотека
           await sleep(1500 * (a + 1));
         }
       }
-      if (!ok) throw new Error('зв\'язок рветься — не вдалося докачати модель; спробуйте ще раз (завантажене частинами почнеться спочатку)');
-      got = end + 1;
-      postMessage({ type: 'load', p: { status: 'progress', file: f, loaded: got, total } });
+      if (!b) throw new Error('зв\'язок рветься — завантажене збережено; натисніть «Розпізнати» ще раз, і модель докачається з місця зупинки');
+      parts.push(b); got = end + 1;
+      postMessage({ type: 'load', p: { status: 'progress', file: f, loaded: got, total, resumed } });
     }
     await c.put(url, new Response(new Blob(parts), { headers: { 'Content-Length': String(total), 'Content-Type': 'application/octet-stream' } }));
+    for (let i = 0; i < N; i++) await pc.delete(pkey(i));   // файл цілий — частини більше не потрібні
   }
 }
 // vocab.json — через той самий кеш «transformers-cache», щоб працювало й без інтернету
@@ -131,7 +139,7 @@ async function load(name) {
     for (const t of tries) {
       try {
         try { await prefetch(M.id, modelFiles(M, t.dtype)); }
-        catch (e) { if (/зв'язок рветься/.test(e.message)) throw e; console.warn('prefetch', e); }
+        catch (e) { if (/зв'язок рветься/.test(e.message)) { loading = null; throw e; } console.warn('prefetch', e); }
         asr = M.ctc ? await loadCtc(M, t) : await pipeline('automatic-speech-recognition', M.id, { ...t, progress_callback: p => postMessage({ type: 'load', p }) });
         dev = t.device; return asr;
       } catch (e) { last = e; console.warn('ASR', t.device, e); }
