@@ -6,7 +6,20 @@
 import { pipeline, env, WhisperTextStreamer, Tensor, AutoModelForCTC } from './transformers.min.js';
 
 env.allowLocalModels = false;
-env.useBrowserCache = true;
+// v251: моделі — в IndexedDB «asr-models», а не в кеші браузера: «Бойові звіти» з того ж сайту при кожному оновленні
+// видаляли всі кеші сайту, крім свого, — і моделі зникали. IndexedDB вони не чіпають.
+const MDB = (() => {
+  let p = null;
+  const open = () => p || (p = new Promise((res, rej) => { const r = indexedDB.open('asr-models', 1); r.onupgradeneeded = () => { r.result.createObjectStore('files'); r.result.createObjectStore('parts'); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const tx = (st, mode, fn) => open().then(db => new Promise((res, rej) => { const t = db.transaction(st, mode), q = fn(t.objectStore(st)); t.oncomplete = () => res(q && q.result); t.onerror = t.onabort = () => rej(t.error); }));
+  return { get: (st, k) => tx(st, 'readonly', s => s.get(k)), put: (st, k, v) => tx(st, 'readwrite', s => s.put(v, k)), del: (st, k) => tx(st, 'readwrite', s => s.delete(k)) };
+})();
+const keyOf = r => typeof r === 'string' ? r : r.url;
+const modelCache = {
+  async match(r) { const v = await MDB.get('files', keyOf(r)).catch(() => null); return v ? new Response(v.blob, { headers: v.headers }) : undefined; },
+  async put(r, resp) { const blob = await resp.blob(), headers = {}; resp.headers.forEach((v, k) => { headers[k] = v; }); headers['content-length'] = String(blob.size); await MDB.put('files', keyOf(r), { blob, headers, size: blob.size }); },
+};
+env.useBrowserCache = false; env.useCustomCache = true; env.customCache = modelCache;
 env.backends.onnx.wasm.wasmPaths = new URL('./', import.meta.url).href;   // не з CDN — з папки застосунку
 
 // v224: дві моделі (вибір у ⚙): turbo — Whisper large-v3-turbo, стиснена (q4f16 ≈ 540 МБ; без shader-f16 — q4 ≈ 720 МБ);
@@ -50,7 +63,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 // v246: кожна скачана частина одразу лежить у кеші «asr-parts» (адреса файлу + ?__part=i&n=розмір) — обрив, «Зупинити»,
 // закрите вікно чи перезапуск не гублять завантаженого: наступного разу качаються лише відсутні частини
 async function prefetch(id, files) {
-  let c, pc; try { c = await caches.open('transformers-cache'); pc = await caches.open('asr-parts'); } catch (e) { return; }
+  const c = modelCache;   // v251: файли й частини — в IndexedDB «asr-models»
   const sizes = await fileSizes(id), CH = 16 << 20;
   for (const f of files) {
     const url = fileURL(id, f), total = sizes[f];
@@ -61,8 +74,8 @@ async function prefetch(id, files) {
     for (let i = 0; i < N; i++) {
       const from = i * CH, end = Math.min(total, from + CH) - 1, len = end - from + 1;
       let b = null;
-      const hit = await pc.match(pkey(i));
-      if (hit) { b = await hit.blob(); if (b.size !== len) b = null; else resumed += len; }
+      const hit = await MDB.get('parts', pkey(i)).catch(() => null);
+      if (hit) { b = hit.blob; if (!b || b.size !== len) b = null; else resumed += len; }
       for (let a = 0; !b && a < 8; a++) {
         try {
           const r = await fetch(url, { headers: { Range: 'bytes=' + from + '-' + end } });
@@ -71,7 +84,7 @@ async function prefetch(id, files) {
             if (r.status !== 206) throw new Error('немає частин (' + r.status + ')');
             b = await r.blob(); if (b.size !== len) { b = null; throw new Error('обірвано'); }
           }
-          await pc.put(pkey(i), new Response(b, { headers: { 'Content-Length': String(len) } }));
+          await MDB.put('parts', pkey(i), { blob: b, size: len });
         } catch (e) {
           if (/немає частин/.test(e.message)) return;      // сервер не віддає частинами — хай качає бібліотека
           await sleep(1500 * (a + 1));
@@ -82,15 +95,14 @@ async function prefetch(id, files) {
       postMessage({ type: 'load', p: { status: 'progress', file: f, loaded: got, total, resumed } });
     }
     await c.put(url, new Response(new Blob(parts), { headers: { 'Content-Length': String(total), 'Content-Type': 'application/octet-stream' } }));
-    for (let i = 0; i < N; i++) await pc.delete(pkey(i));   // файл цілий — частини більше не потрібні
+    for (let i = 0; i < N; i++) await MDB.del('parts', pkey(i)).catch(() => {});   // файл цілий — частини більше не потрібні
   }
 }
 // vocab.json — через той самий кеш «transformers-cache», щоб працювало й без інтернету
 async function hubJSON(id, file) {
   const url = env.allowLocalModels && !env.allowRemoteModels ? env.localModelPath + id + '/' + file : env.remoteHost.replace(/\/$/, '') + '/' + env.remotePathTemplate.replace('{model}', id).replace('{revision}', 'main') + file;
-  let c = null; try { c = await caches.open('transformers-cache'); } catch (e) {}
-  let r = c && await c.match(url);
-  if (!r) { r = await fetch(url); if (!r.ok) throw new Error(file + ': ' + r.status); if (c) await c.put(url, r.clone()); }
+  let r = await modelCache.match(url);
+  if (!r) { r = await fetch(url); if (!r.ok) throw new Error(file + ': ' + r.status); await modelCache.put(url, r.clone()); }
   return r.json();
 }
 async function loadCtc(M, t) {
