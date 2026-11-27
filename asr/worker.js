@@ -26,8 +26,57 @@ const MODELS = {
   // не знає мов і не перекладає; без розділових знаків і великих літер. fp16 ≈ 600 МБ (відеокарта), int8 ≈ 340 МБ (процесор).
   // tokenizer.json у пакеті немає — тому не pipeline: модель сама, а літери — зі словника vocab.json (жадібний CTC).
   ctc: { id: 'XDcobra/wav2vec2-large-xlsr-53-ukrainian-ONNX', ctc: true,
-    gpu: f16 => (f16 ? 'fp16' : null), cpu: 'int8', cpuOk: true },
+    gpu: () => null, cpu: 'int8', cpuOk: true },   // v245: завжди int8 ≈ 340 МБ (fp16 для відеокарти — 602 МБ, а обіцяли 340); один прохід — процесора досить
 };
+// v245: великі файли моделі качаємо самі — частинами по 16 МБ (Range) з повтором кожної частини: бібліотека тягне
+// файл одним запитом на сотні МБ, і обрив зв'язку («Failed to fetch») починав усе з нуля. Готовий файл — у той самий
+// кеш «transformers-cache» під тією ж адресою, тож бібліотека бере його звідти. Щось не так — далі качає вона сама.
+const SFX = { fp32: '', fp16: '_fp16', q8: '_quantized', int8: '_int8', uint8: '_uint8', q4: '_q4', q4f16: '_q4f16', bnb4: '_bnb4' };
+function modelFiles(M, dtype) {
+  if (M.ctc) return ['onnx/model' + SFX[dtype] + '.onnx'];
+  return ['encoder_model', 'decoder_model_merged'].map(n => 'onnx/' + n + SFX[dtype[n]] + '.onnx');
+}
+const fileURL = (id, f) => env.allowLocalModels && !env.allowRemoteModels ? env.localModelPath + id + '/' + f
+  : env.remoteHost.replace(/\/$/, '') + '/' + env.remotePathTemplate.replace('{model}', id).replace('{revision}', 'main') + f;
+async function fileSizes(id) {
+  try {
+    const base = env.allowLocalModels && !env.allowRemoteModels ? null : env.remoteHost.replace(/\/$/, '') + '/api/models/' + id + '/tree/main/onnx';
+    if (!base) return {};
+    const r = await fetch(base); if (!r.ok) return {};
+    const out = {}; for (const f of await r.json()) out[f.path] = f.size; return out;
+  } catch (e) { return {}; }
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function prefetch(id, files) {
+  let c; try { c = await caches.open('transformers-cache'); } catch (e) { return; }
+  const sizes = await fileSizes(id), CH = 16 << 20;
+  for (const f of files) {
+    const url = fileURL(id, f), total = sizes[f];
+    if (await c.match(url)) continue;
+    if (!total) continue;                                   // розміру не знаємо — нехай качає бібліотека
+    const parts = []; let got = 0;
+    while (got < total) {
+      const end = Math.min(total, got + CH) - 1;
+      let ok = false;
+      for (let a = 0; a < 8 && !ok; a++) {
+        try {
+          const r = await fetch(url, { headers: { Range: 'bytes=' + got + '-' + end } });
+          if (r.status === 200 && got === 0 && end === total - 1) { parts.push(await r.blob()); ok = true; break; }
+          if (r.status !== 206) throw new Error('немає частин (' + r.status + ')');
+          const b = await r.blob(); if (b.size !== end - got + 1) throw new Error('обірвано');
+          parts.push(b); ok = true;
+        } catch (e) {
+          if (/немає частин/.test(e.message)) return;      // сервер не віддає частинами — хай качає бібліотека
+          await sleep(1500 * (a + 1));
+        }
+      }
+      if (!ok) throw new Error('зв\'язок рветься — не вдалося докачати модель; спробуйте ще раз (завантажене частинами почнеться спочатку)');
+      got = end + 1;
+      postMessage({ type: 'load', p: { status: 'progress', file: f, loaded: got, total } });
+    }
+    await c.put(url, new Response(new Blob(parts), { headers: { 'Content-Length': String(total), 'Content-Type': 'application/octet-stream' } }));
+  }
+}
 // vocab.json — через той самий кеш «transformers-cache», щоб працювало й без інтернету
 async function hubJSON(id, file) {
   const url = env.allowLocalModels && !env.allowRemoteModels ? env.localModelPath + id + '/' + file : env.remoteHost.replace(/\/$/, '') + '/' + env.remotePathTemplate.replace('{model}', id).replace('{revision}', 'main') + file;
@@ -81,6 +130,8 @@ async function load(name) {
     let last;
     for (const t of tries) {
       try {
+        try { await prefetch(M.id, modelFiles(M, t.dtype)); }
+        catch (e) { if (/зв'язок рветься/.test(e.message)) throw e; console.warn('prefetch', e); }
         asr = M.ctc ? await loadCtc(M, t) : await pipeline('automatic-speech-recognition', M.id, { ...t, progress_callback: p => postMessage({ type: 'load', p }) });
         dev = t.device; return asr;
       } catch (e) { last = e; console.warn('ASR', t.device, e); }
